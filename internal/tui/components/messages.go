@@ -8,187 +8,6 @@ import (
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
-type UserMessage struct {
-	Content string
-	Theme   styles.Theme
-}
-
-func (m UserMessage) Render(width int) string {
-	w := width - 2
-	if w < 20 {
-		w = 20
-	}
-	prefix := m.Theme.UserMessagePrefix.Render("You: ")
-	content := m.Theme.UserMessage.Render(m.Content)
-	return lipgloss.NewStyle().Width(w).Render(prefix + content)
-}
-
-type AssistantMessage struct {
-	Content string
-	Theme   styles.Theme
-}
-
-func (m AssistantMessage) Render(width int) string {
-	w := width - 2
-	if w < 20 {
-		w = 20
-	}
-	return m.Theme.AssistantMessage.Width(w).Render(m.Content)
-}
-
-type CommandOutputMessage struct {
-	Content string
-	Theme   styles.Theme
-}
-
-func (m CommandOutputMessage) Render(width int) string {
-	w := width - 2
-	if w < 20 {
-		w = 20
-	}
-	return m.Theme.CommandOutput.Width(w).Render(m.Content)
-}
-
-type ToolCallDisplay struct {
-	ToolName  string
-	Input     string
-	ToolUseID string
-	Status    string
-	Theme     styles.Theme
-	Spinner   string
-}
-
-func (t ToolCallDisplay) Render(width int) string {
-	w := width - 4
-	if w < 20 {
-		w = 20
-	}
-
-	var statusStyle lipgloss.Style
-	var statusIcon string
-
-	switch t.Status {
-	case "running":
-		statusStyle = t.Theme.ToolCallRunning
-		statusIcon = "⟳ " + t.Spinner
-	case "success":
-		statusStyle = t.Theme.ToolCallSuccess
-		statusIcon = "✓"
-	case "error":
-		statusStyle = t.Theme.ToolCallError
-		statusIcon = "✗"
-	default:
-		statusStyle = t.Theme.ToolCallRunning
-		statusIcon = "◌"
-	}
-
-	toolName := lipgloss.NewStyle().Bold(true).Render(t.ToolName)
-	statusStr := statusStyle.Render(statusIcon)
-	inputSummary := t.Input
-	if len(inputSummary) > 80 {
-		inputSummary = inputSummary[:77] + "..."
-	}
-
-	header := fmt.Sprintf("%s  %s", statusStr, toolName)
-	body := ""
-	if inputSummary != "" {
-		body = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorTextMuted)).
-			Render(inputSummary)
-	}
-
-	content := header
-	if body != "" {
-		content += "\n" + body
-	}
-
-	return t.Theme.ToolCall.Width(w).Render(content)
-}
-
-type ToolResultDisplay struct {
-	ToolName  string
-	ToolUseID string
-	Output    string
-	IsError   bool
-	Collapsed bool
-	Theme     styles.Theme
-}
-
-func (t ToolResultDisplay) Render(width int) string {
-	w := width - 4
-	if w < 20 {
-		w = 20
-	}
-
-	statusIcon := "✓"
-	var baseStyle lipgloss.Style
-
-	if t.IsError {
-		statusIcon = "✗"
-		baseStyle = t.Theme.ToolResultError
-	} else {
-		baseStyle = t.Theme.ToolResult
-	}
-
-	header := fmt.Sprintf("%s  %s result", statusIcon, t.ToolName)
-
-	if t.Collapsed {
-		preview := t.Output
-		if len(preview) > 120 {
-			preview = preview[:117] + "..."
-		}
-		previewStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorTextMuted)).
-			Italic(true)
-		content := header + "\n" + previewStyle.Render(preview)
-		return baseStyle.Width(w).Render(content)
-	}
-
-	outputStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorTextMuted)).
-		MarginTop(1)
-
-	content := header + "\n" + outputStyle.Width(w-4).Render(t.Output)
-	return baseStyle.Width(w).Render(content)
-}
-
-type ThinkingBlock struct {
-	Content   string
-	Collapsed bool
-	Theme     styles.Theme
-}
-
-func (t ThinkingBlock) Render(width int) string {
-	w := width - 4
-	if w < 20 {
-		w = 20
-	}
-
-	header := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorSecondary)).
-		Bold(true).
-		Render("Thinking...")
-
-	if t.Collapsed {
-		preview := t.Content
-		if len(preview) > 80 {
-			preview = preview[:77] + "..."
-		}
-		previewStyle := lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorTextMuted)).
-			Italic(true)
-		content := header + "  " + previewStyle.Render(preview)
-		return t.Theme.ThinkingBlock.Width(w).Render(content)
-	}
-
-	contentStyle := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorTextMuted)).
-		MarginTop(1)
-
-	content := header + "\n" + contentStyle.Width(w-4).Render(t.Content)
-	return t.Theme.ThinkingBlock.Width(w).Render(content)
-}
-
 type DisplayMessage struct {
 	Type      string
 	Content   string
@@ -209,72 +28,241 @@ type MessageList struct {
 	Height   int
 }
 
-func (ml MessageList) Render(width int) string {
+func (ml *MessageList) Render(width int) string {
 	if ml.Height <= 0 {
 		ml.Height = 20
 	}
 
-	var rendered []string
+	var lines []string
+
 	for _, msg := range ml.Messages {
-		switch msg.Type {
-		case "user":
-			rendered = append(rendered, UserMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
-		case "assistant":
-			rendered = append(rendered, AssistantMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
-		case "command_output":
-			rendered = append(rendered, CommandOutputMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
-		case "tool_call":
-			rendered = append(rendered, ToolCallDisplay{
-				ToolName:  msg.ToolName,
-				Input:     msg.Content,
-				ToolUseID: msg.ToolID,
-				Status:    msg.Status,
-				Theme:     msg.Theme,
-				Spinner:   msg.Spinner,
-			}.Render(width))
-		case "tool_result":
-			rendered = append(rendered, ToolResultDisplay{
-				ToolName:  msg.ToolName,
-				ToolUseID: msg.ToolID,
-				Output:    msg.Output,
-				IsError:   msg.IsError,
-				Collapsed: msg.Collapsed,
-				Theme:     msg.Theme,
-			}.Render(width))
-		case "thinking":
-			rendered = append(rendered, ThinkingBlock{
-				Content:   msg.Content,
-				Collapsed: msg.Collapsed,
-				Theme:     msg.Theme,
-			}.Render(width))
-		case "error":
-			rendered = append(rendered, msg.Theme.Error.Render("Error: "+msg.Content))
-		}
+		rendered := renderMessage(msg, width)
+		lines = append(lines, rendered)
 	}
 
-	allContent := strings.Join(rendered, "\n")
-	totalLines := strings.Count(allContent, "\n") + 1
+	allContent := strings.Join(lines, "\n")
+	allLines := strings.Split(allContent, "\n")
 
+	totalLines := len(allLines)
 	if totalLines <= ml.Height {
-		return ml.Theme.Scrollable.Width(width).Height(ml.Height).Render(allContent)
+		return lipgloss.NewStyle().
+			Width(width).
+			Height(ml.Height).
+			Background(lipgloss.Color(styles.ColorBackground)).
+			Render(allContent)
 	}
 
 	if ml.Scroll < 0 {
 		ml.Scroll = 0
 	}
-	if ml.Scroll > totalLines-ml.Height {
-		ml.Scroll = totalLines - ml.Height
+	maxScroll := totalLines - ml.Height
+	if ml.Scroll > maxScroll {
+		ml.Scroll = maxScroll
 	}
 
-	allLines := strings.Split(allContent, "\n")
 	start := ml.Scroll
 	end := start + ml.Height
-	if end > len(allLines) {
-		end = len(allLines)
+	if end > totalLines {
+		end = totalLines
 	}
 
 	visible := strings.Join(allLines[start:end], "\n")
-	return ml.Theme.Scrollable.Width(width).Height(ml.Height).Render(visible)
+	return lipgloss.NewStyle().
+		Width(width).
+		Height(ml.Height).
+		Background(lipgloss.Color(styles.ColorBackground)).
+		Render(visible)
+}
+
+func renderMessage(msg DisplayMessage, width int) string {
+	w := width - 4
+	if w < 20 {
+		w = 20
+	}
+
+	switch msg.Type {
+	case "user":
+		return renderUserMessage(msg, w)
+	case "assistant":
+		return renderAssistantMessage(msg, w)
+	case "command_output":
+		return renderCommandOutput(msg, w)
+	case "tool_call":
+		return renderToolCall(msg, w)
+	case "tool_result":
+		return renderToolResult(msg, w)
+	case "thinking":
+		return renderThinking(msg, w)
+	case "error":
+		return msg.Theme.Error.Render("Error: " + msg.Content)
+	default:
+		return msg.Content
+	}
+}
+
+func renderUserMessage(msg DisplayMessage, width int) string {
+	prefix := msg.Theme.UserPrefix.Render("You:")
+	content := wrapText(msg.Content, width-8)
+	lines := strings.Split(content, "\n")
+	var builder strings.Builder
+	builder.WriteString(prefix + " ")
+	for i, line := range lines {
+		if i == 0 {
+			builder.WriteString(line + "\n")
+		} else {
+			builder.WriteString("      " + line + "\n")
+		}
+	}
+	return msg.Theme.UserMessage.Width(width).Render(strings.TrimSuffix(builder.String(), "\n"))
+}
+
+func renderAssistantMessage(msg DisplayMessage, width int) string {
+	prefix := msg.Theme.AssistantPrefix.Render("Claude:")
+	content := wrapText(msg.Content, width-8)
+	lines := strings.Split(content, "\n")
+	var builder strings.Builder
+	builder.WriteString(prefix + " ")
+	for i, line := range lines {
+		if i == 0 {
+			builder.WriteString(line + "\n")
+		} else {
+			builder.WriteString("       " + line + "\n")
+		}
+	}
+	return msg.Theme.AssistantMessage.Width(width).Render(strings.TrimSuffix(builder.String(), "\n"))
+}
+
+func renderCommandOutput(msg DisplayMessage, width int) string {
+	lines := strings.Split(msg.Content, "\n")
+	var builder strings.Builder
+	for _, line := range lines {
+		builder.WriteString("  " + line + "\n")
+	}
+	return msg.Theme.CommandOutput.Width(width).Render(strings.TrimSuffix(builder.String(), "\n"))
+}
+
+func renderToolCall(msg DisplayMessage, width int) string {
+	var statusIcon string
+	var statusStyle lipgloss.Style
+
+	switch msg.Status {
+	case "running":
+		statusIcon = msg.Spinner
+		statusStyle = msg.Theme.ToolCallRunning
+	case "success":
+		statusIcon = "✓"
+		statusStyle = msg.Theme.ToolCallSuccess
+	case "error":
+		statusIcon = "✗"
+		statusStyle = msg.Theme.ToolCallError
+	default:
+		statusIcon = "◌"
+		statusStyle = msg.Theme.ToolCallRunning
+	}
+
+	toolName := msg.ToolName
+	if toolName == "" {
+		toolName = msg.Content
+	}
+
+	input := msg.Output
+	if input == "" {
+		input = msg.Content
+	}
+
+	header := fmt.Sprintf("%s %s", statusStyle.Render(statusIcon), lipgloss.NewStyle().Bold(true).Render(toolName))
+
+	var body string
+	if input != "" && input != toolName {
+		preview := input
+		if len(preview) > 100 {
+			preview = preview[:97] + "..."
+		}
+		body = lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorTextMuted)).
+			Render(preview)
+	}
+
+	content := header
+	if body != "" {
+		content = header + "\n" + body
+	}
+
+	return msg.Theme.ToolCall.Width(width).Render(content)
+}
+
+func renderToolResult(msg DisplayMessage, width int) string {
+	icon := "✓"
+	if msg.IsError {
+		icon = "✗"
+	}
+
+	header := fmt.Sprintf("%s %s", icon, msg.ToolName)
+
+	output := msg.Output
+	if len(output) > 200 {
+		output = output[:197] + "..."
+	}
+
+	content := header + "\n" + lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorTextMuted)).
+		Render(output)
+
+	return msg.Theme.ToolResult.Width(width).Render(content)
+}
+
+func renderThinking(msg DisplayMessage, width int) string {
+	header := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorSecondary)).
+		Bold(true).
+		Render("Thinking...")
+
+	preview := msg.Content
+	if len(preview) > 100 {
+		preview = preview[:97] + "..."
+	}
+
+	content := header + " " + lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorTextMuted)).
+		Italic(true).
+		Render(preview)
+
+	return msg.Theme.ThinkingBlock.Width(width).Render(content)
+}
+
+func wrapText(text string, width int) string {
+	if width <= 0 {
+		return text
+	}
+
+	var result strings.Builder
+	lines := strings.Split(text, "\n")
+
+	for _, line := range lines {
+		if len(line) <= width {
+			result.WriteString(line + "\n")
+			continue
+		}
+
+		words := strings.Fields(line)
+		currentLen := 0
+
+		for _, word := range words {
+			wordLen := len(word) + 1
+			if currentLen+wordLen > width && currentLen > 0 {
+				result.WriteString("\n")
+				currentLen = 0
+			}
+			if currentLen > 0 {
+				result.WriteString(" ")
+			}
+			result.WriteString(word)
+			currentLen += wordLen
+		}
+		result.WriteString("\n")
+	}
+
+	return strings.TrimSuffix(result.String(), "\n")
 }
 
 func (ml *MessageList) ScrollUp() {
@@ -283,11 +271,8 @@ func (ml *MessageList) ScrollUp() {
 	}
 }
 
-func (ml *MessageList) ScrollDown(maxLines int) {
-	totalLines := maxLines
-	if ml.Scroll < totalLines-ml.Height {
-		ml.Scroll++
-	}
+func (ml *MessageList) ScrollDown() {
+	ml.Scroll++
 }
 
 func (ml *MessageList) ScrollToBottom() {
@@ -301,12 +286,6 @@ func (ml *MessageList) PageUp() {
 	}
 }
 
-func (ml *MessageList) PageDown(maxLines int) {
+func (ml *MessageList) PageDown() {
 	ml.Scroll += ml.Height
-	if ml.Scroll > maxLines-ml.Height {
-		ml.Scroll = maxLines - ml.Height
-	}
-	if ml.Scroll < 0 {
-		ml.Scroll = 0
-	}
 }

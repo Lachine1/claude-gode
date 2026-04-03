@@ -121,33 +121,6 @@ func (i *Input) HistoryDown() {
 	}
 }
 
-func (i *Input) Render(width int) string {
-	w := width - 4
-	if w < 20 {
-		w = 20
-	}
-
-	prompt := i.Theme.InputPrompt.Render("❯ ")
-
-	buf := []rune(i.Buffer)
-	cursorPos := i.Cursor
-	if cursorPos > len(buf) {
-		cursorPos = len(buf)
-	}
-
-	var display string
-	if i.Focused {
-		left := string(buf[:cursorPos])
-		right := string(buf[cursorPos:])
-		cursor := i.Theme.InputCursor.Render("█")
-		display = prompt + left + cursor + right
-	} else {
-		display = prompt + i.Buffer
-	}
-
-	return i.Theme.Input.Width(w).Render(display)
-}
-
 func (i *Input) RenderInline() string {
 	buf := []rune(i.Buffer)
 	cursorPos := i.Cursor
@@ -158,7 +131,7 @@ func (i *Input) RenderInline() string {
 	if i.Focused {
 		left := string(buf[:cursorPos])
 		right := string(buf[cursorPos:])
-		cursor := i.Theme.InputCursor.Render("█")
+		cursor := "█"
 		return left + cursor + right
 	}
 	return i.Buffer

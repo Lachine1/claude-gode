@@ -2,22 +2,21 @@ package components
 
 import (
 	"fmt"
+	"strings"
 
 	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
 type StatusBar struct {
-	Model      string
-	InputTok   int
-	OutputTok  int
-	CacheRead  int
-	CacheWrite int
-	Cost       float64
-	PermMode   string
-	GitBranch  string
-	Theme      styles.Theme
-	Width      int
+	Model     string
+	InputTok  int
+	OutputTok int
+	Cost      float64
+	PermMode  string
+	GitBranch string
+	Theme     styles.Theme
+	Width     int
 }
 
 func NewStatusBar(theme styles.Theme) *StatusBar {
@@ -28,14 +27,12 @@ func NewStatusBar(theme styles.Theme) *StatusBar {
 	}
 }
 
-func (s *StatusBar) Update(model string, inputTok, outputTok, cacheRead, cacheWrite int, cost float64, permMode, gitBranch string) {
+func (s *StatusBar) Update(model string, inputTok, outputTok int, cost float64, permMode, gitBranch string) {
 	if model != "" {
 		s.Model = model
 	}
 	s.InputTok = inputTok
 	s.OutputTok = outputTok
-	s.CacheRead = cacheRead
-	s.CacheWrite = cacheWrite
 	s.Cost = cost
 	if permMode != "" {
 		s.PermMode = permMode
@@ -48,41 +45,53 @@ func (s *StatusBar) Render(width int) string {
 		return ""
 	}
 
-	modelStr := s.Theme.StatusBarModel.Render(fmt.Sprintf(" %s ", s.Model))
-	tokStr := s.Theme.StatusBarTokens.Render(fmt.Sprintf(" tokens: %d in / %d out ", s.InputTok, s.OutputTok))
-	costStr := s.Theme.StatusBarCost.Render(fmt.Sprintf(" cost: $%.4f ", s.Cost))
+	// Model name (orange/bold)
+	modelStr := s.Theme.StatusModel.Render(fmt.Sprintf(" %s ", s.Model))
 
-	var permStyle lipgloss.Style
-	switch s.PermMode {
-	case "accept":
-		permStyle = s.Theme.StatusBarPerm
-	case "smart":
-		permStyle = s.Theme.StatusBarCost
-	case "edit":
-		permStyle = s.Theme.StatusBarModel
-	default:
-		permStyle = s.Theme.StatusBarPerm
+	// Token count (cyan)
+	var tokStr string
+	if s.InputTok > 0 || s.OutputTok > 0 {
+		tokStr = s.Theme.StatusTokens.Render(fmt.Sprintf(" %d in / %d out ", s.InputTok, s.OutputTok))
+	} else {
+		tokStr = ""
 	}
-	permStr := permStyle.Render(fmt.Sprintf(" perm: %s ", s.PermMode))
 
-	gitStr := ""
+	// Cost (warning color)
+	var costStr string
+	if s.Cost > 0 {
+		costStr = fmt.Sprintf(" $%.2f ", s.Cost)
+	}
+
+	// Permission mode (green)
+	permStr := s.Theme.StatusMode.Render(fmt.Sprintf(" %s ", s.PermMode))
+
+	// Git branch (muted)
+	var gitStr string
 	if s.GitBranch != "" {
-		gitStr = s.Theme.StatusBarGit.Render(fmt.Sprintf(" git: %s ", s.GitBranch))
+		gitStr = lipgloss.NewStyle().
+			Foreground(lipgloss.Color(styles.ColorTextMuted)).
+			Render(fmt.Sprintf(" %s ", s.GitBranch))
 	}
 
-	parts := []string{modelStr, tokStr, costStr, permStr}
+	// Help hint
+	helpStr := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorTextMuted)).
+		Render(" ? for help ")
+
+	parts := []string{modelStr}
+	if tokStr != "" {
+		parts = append(parts, tokStr)
+	}
+	if costStr != "" {
+		parts = append(parts, s.Theme.StatusTokens.Render(costStr))
+	}
+	parts = append(parts, permStr)
 	if gitStr != "" {
 		parts = append(parts, gitStr)
 	}
+	parts = append(parts, helpStr)
 
-	bar := ""
-	for _, p := range parts {
-		bar += p
-	}
-
-	bar = lipgloss.NewStyle().
-		MaxWidth(width).
-		Render(bar)
+	bar := strings.Join(parts, "│")
 
 	return s.Theme.StatusBar.Width(width).Render(bar)
 }

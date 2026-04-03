@@ -7,6 +7,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/bootstrap"
 	"github.com/Lachine1/claude-gode/internal/commands"
 	"github.com/Lachine1/claude-gode/internal/engine"
@@ -15,7 +16,6 @@ import (
 	"github.com/Lachine1/claude-gode/pkg/types"
 )
 
-// Run starts the terminal user interface
 func Run(ctx context.Context, state *bootstrap.State, args []string) error {
 	theme := styles.DefaultTheme()
 	model := newAppModel(state, args, theme)
@@ -30,6 +30,7 @@ type appModel struct {
 	messageList    *components.MessageList
 	input          *components.Input
 	statusBar      *components.StatusBar
+	spinner        *components.Spinner
 	messages       []types.Message
 	usage          types.Usage
 	cost           float64
@@ -37,23 +38,23 @@ type appModel struct {
 	gitBranch      string
 	width          int
 	height         int
-	spinnerFrame   int
-	spinnerTicker  *time.Ticker
+	streaming      bool
 	streamingText  strings.Builder
-	streamingTool  strings.Builder
+	streamingTok   int
 }
 
 func newAppModel(state *bootstrap.State, args []string, theme styles.Theme) appModel {
 	input := components.NewInput(theme)
 	input.Focused = true
 	statusBar := components.NewStatusBar(theme)
+	spinner := components.NewSpinner(theme)
 
 	permMode := "default"
 	if state.Config.PermissionMode() != "" {
 		permMode = state.Config.PermissionMode()
 	}
 
-	statusBar.Update(state.Config.Model(), 0, 0, 0, 0, 0.0, permMode, "")
+	statusBar.Update(state.Config.Model(), 0, 0, 0.0, permMode, "")
 
 	m := appModel{
 		theme:          theme,
@@ -61,11 +62,11 @@ func newAppModel(state *bootstrap.State, args []string, theme styles.Theme) appM
 		messageList:    &components.MessageList{Theme: theme, Height: 20},
 		input:          input,
 		statusBar:      statusBar,
+		spinner:        spinner,
 		messages:       make([]types.Message, 0),
 		permissionMode: permMode,
 		width:          80,
 		height:         24,
-		spinnerFrame:   0,
 	}
 
 	if len(args) > 0 {
@@ -86,7 +87,7 @@ func newAppModel(state *bootstrap.State, args []string, theme styles.Theme) appM
 }
 
 func (m appModel) Init() tea.Cmd {
-	return tea.Tick(time.Second/10, func(time.Time) tea.Msg {
+	return tea.Tick(time.Millisecond*100, func(time.Time) tea.Msg {
 		return spinnerTickMsg{}
 	})
 }
@@ -104,13 +105,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case spinnerTickMsg:
-		m.spinnerFrame = (m.spinnerFrame + 1) % 4
-		for i := range m.messageList.Messages {
-			if m.messageList.Messages[i].Type == "tool_call" && m.messageList.Messages[i].Status == "running" {
-				m.messageList.Messages[i].Spinner = spinnerFrames[m.spinnerFrame]
-			}
+		if m.streaming {
+			m.spinner.Tick()
 		}
-		return m, tea.Tick(time.Second/10, func(time.Time) tea.Msg {
+		return m, tea.Tick(time.Millisecond*100, func(time.Time) tea.Msg {
 			return spinnerTickMsg{}
 		})
 
@@ -137,7 +135,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.messageList.PageUp()
 			return m, nil
 		case "pgdown":
-			m.messageList.PageDown(9999)
+			m.messageList.PageDown()
 			return m, nil
 		case "left":
 			m.input.MoveLeft()
@@ -248,6 +246,11 @@ func (m appModel) handleUserInput(input string) (tea.Model, tea.Cmd) {
 
 	m.messageList.ScrollToBottom()
 
+	m.streaming = true
+	m.streamingText.Reset()
+	m.streamingTok = 0
+	m.spinner.Start()
+
 	m.messageList.Messages = append(m.messageList.Messages, components.DisplayMessage{
 		Type:    "assistant",
 		Content: "",
@@ -260,40 +263,38 @@ func (m appModel) handleUserInput(input string) (tea.Model, tea.Cmd) {
 }
 
 type engineResultMsg struct {
-	text      string
-	toolCalls []string
-	err       error
-	usage     types.Usage
+	text  string
+	err   error
+	usage types.Usage
 }
 
 func (m appModel) submitQuery(input string) tea.Cmd {
 	return func() tea.Msg {
+		ctx := context.Background()
 		var textBuffer strings.Builder
-		var toolCalls []string
 		var lastUsage types.Usage
 
-		ctx := context.Background()
 		err := m.bootstrap.QueryEngine.SubmitMessage(ctx, input, func(ev engine.Event) {
 			switch e := ev.(type) {
 			case engine.TextEvent:
 				textBuffer.WriteString(e.Token)
-			case engine.ToolCallEvent:
-				toolCalls = append(toolCalls, e.Name)
 			case engine.UsageEvent:
 				lastUsage = e.Usage
 			}
 		})
 
 		return engineResultMsg{
-			text:      textBuffer.String(),
-			toolCalls: toolCalls,
-			err:       err,
-			usage:     lastUsage,
+			text:  textBuffer.String(),
+			err:   err,
+			usage: lastUsage,
 		}
 	}
 }
 
 func (m appModel) handleEngineResult(msg engineResultMsg) (tea.Model, tea.Cmd) {
+	m.streaming = false
+	m.spinner.Stop()
+
 	if msg.err != nil {
 		m.messageList.Messages = append(m.messageList.Messages, components.DisplayMessage{
 			Type:    "error",
@@ -312,28 +313,20 @@ func (m appModel) handleEngineResult(msg engineResultMsg) (tea.Model, tea.Cmd) {
 			},
 		})
 
-		m.messageList.Messages = append(m.messageList.Messages, components.DisplayMessage{
+		m.messageList.Messages[len(m.messageList.Messages)-1] = components.DisplayMessage{
 			Type:    "assistant",
 			Content: msg.text,
 			Theme:   m.theme,
-		})
-	}
-
-	if len(msg.toolCalls) > 0 {
-		toolMsg := "Tools called: " + strings.Join(msg.toolCalls, ", ")
-		m.messageList.Messages = append(m.messageList.Messages, components.DisplayMessage{
-			Type:    "tool_call",
-			Content: toolMsg,
-			Theme:   m.theme,
-		})
+		}
+	} else {
+		m.messageList.Messages = m.messageList.Messages[:len(m.messageList.Messages)-1]
 	}
 
 	m.usage = msg.usage
+	m.statusBar.Update(m.bootstrap.Config.Model(), m.usage.InputTokens, m.usage.OutputTokens, m.cost, m.permissionMode, m.gitBranch)
 	m.messageList.ScrollToBottom()
 	return m, nil
 }
-
-var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸"}
 
 func (m appModel) View() tea.View {
 	var content strings.Builder
@@ -345,7 +338,10 @@ func (m appModel) View() tea.View {
 		content.WriteString("\n")
 	}
 
-	inputLine := m.theme.InputPrompt.Render("> ") + m.input.RenderInline()
+	promptStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorTextMuted))
+	prompt := promptStyle.Render("> ")
+	inputLine := prompt + m.input.RenderInline()
 	content.WriteString(inputLine)
 	content.WriteString("\n")
 	content.WriteString(m.statusBar.Render(m.width))

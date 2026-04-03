@@ -1,8 +1,9 @@
 package components
 
 import (
-	"fmt"
+	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
@@ -20,31 +21,29 @@ func (w *WelcomeScreen) Render(width int) string {
 		return ""
 	}
 
-	logo := `
-  ╔═╗╔═╗╔╦╗╔═╗╦ ╦╔═╗╦═╗
-  ╠╣ ║ ║ ║║║╣ ║║║║ ║╠╦╝
-  ╚  ╚═╝═╩╝╚═╝╚╩╝╚═╝╚╚
-`
+	titleStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorPrimary)).
+		Bold(true)
 
-	title := w.Theme.WelcomeTitle.Render("Claude Code — Go Edition")
-	tips := []string{
-		"Type your message and press Enter to start",
-		"Use /help to see all available commands",
-		"Use /models to switch AI models",
-		"Use /settings to configure preferences",
-		"Press Ctrl+C or q to quit",
-	}
+	keyStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorSecondary)).
+		Bold(true)
 
-	var tipLines string
-	for i, tip := range tips {
-		num := w.Theme.WelcomeKey.Render(fmt.Sprintf("%d.", i+1))
-		tipLines += fmt.Sprintf("  %s %s\n", num, w.Theme.WelcomeTip.Render(tip))
-	}
+	tipStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorTextMuted))
 
-	footer := w.Theme.WelcomeKey.Render("Press any key to dismiss")
+	var b strings.Builder
 
-	content := logo + "\n" + title + "\n\n" +
-		w.Theme.WelcomeTitle.Render("Quick Tips:") + "\n\n" + tipLines + "\n" + footer
+	b.WriteString(titleStyle.Render("Claude Code — Go Edition") + "\n\n")
+	b.WriteString(tipStyle.Render("Quick Tips:") + "\n")
+	b.WriteString("  " + keyStyle.Render("/help") + " " + tipStyle.Render("- Show all commands") + "\n")
+	b.WriteString("  " + keyStyle.Render("/clear") + " " + tipStyle.Render("- Clear conversation") + "\n")
+	b.WriteString("  " + keyStyle.Render("/models") + " " + tipStyle.Render("- Switch models") + "\n")
+	b.WriteString("\n")
+	b.WriteString(tipStyle.Render("Press any key to dismiss"))
 
-	return w.Theme.Welcome.Render(content)
+	return lipgloss.NewStyle().
+		Width(width).
+		Padding(1, 2).
+		Render(b.String())
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
@@ -106,28 +107,35 @@ func (p *PermissionDialog) HandleKey(key string) bool {
 func (p *PermissionDialog) Render(width int) string {
 	opts := p.options()
 
-	title := p.Theme.PermissionTitle.Render(fmt.Sprintf("Permission Required"))
-	toolInfo := fmt.Sprintf("Tool: %s", p.Theme.PermissionSelected.Render(p.ToolName))
-	actionInfo := fmt.Sprintf("Action: %s", p.Theme.PermissionSelected.Render(p.Action))
+	// Title in orange
+	title := p.Theme.PermissionTitle.Render("Permission Required")
 
+	// Tool info
+	toolInfo := fmt.Sprintf("Tool: %s", lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorPrimary)).
+		Render(p.ToolName))
+	actionInfo := fmt.Sprintf("Action: %s", lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorText)).
+		Render(p.Action))
+
+	// Options with [number] shortcuts
 	var optLines []string
 	for i, opt := range opts {
-		prefix := "  "
-		if i == p.Selected {
-			prefix = "▸ "
-		}
 		num := fmt.Sprintf("[%d]", i+1)
-		line := fmt.Sprintf("%s %s %s", prefix, num, opt)
+		var line string
 		if i == p.Selected {
-			optLines = append(optLines, p.Theme.PermissionSelected.Render(line))
+			line = fmt.Sprintf("  %s %s", num, p.Theme.PermissionSelected.Render(opt))
 		} else {
-			optLines = append(optLines, p.Theme.PermissionOption.Render(line))
+			line = fmt.Sprintf("  %s %s", num, p.Theme.PermissionOption.Render(opt))
 		}
+		optLines = append(optLines, line)
 	}
 
-	hint := p.Theme.PermissionOption.Render("Press 1/2/3 or arrows to select, Enter to confirm, Esc to deny")
+	hint := lipgloss.NewStyle().
+		Foreground(lipgloss.Color(styles.ColorTextMuted)).
+		Render("Press 1/2/3 or arrows to select, Enter to confirm")
 
-	content := title + "\n" + toolInfo + "\n" + actionInfo + "\n\n" + strings.Join(optLines, "\n") + "\n\n" + hint
+	content := title + "\n\n" + toolInfo + "\n" + actionInfo + "\n\n" + strings.Join(optLines, "\n") + "\n\n" + hint
 
 	return p.Theme.PermissionDialog.Render(content)
 }
