@@ -4,20 +4,24 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Lachine1/claude-gode/internal/commands"
+	"github.com/Lachine1/claude-gode/internal/engine"
 	"github.com/Lachine1/claude-gode/internal/services/auth"
 	"github.com/Lachine1/claude-gode/internal/services/config"
+	toolspkg "github.com/Lachine1/claude-gode/internal/tools"
 	"github.com/Lachine1/claude-gode/pkg/types"
 )
 
 // State holds the initialized application state
 type State struct {
-	Config   *config.Config
-	Auth     *auth.AuthState
-	Cwd      string
-	IsGit    bool
-	GitRoot  string
-	Tools    []types.Tool
-	Commands []types.Command
+	Config      *config.Config
+	Auth        *auth.AuthState
+	Cwd         string
+	IsGit       bool
+	GitRoot     string
+	Tools       []types.Tool
+	Commands    []types.Command
+	QueryEngine *engine.QueryEngine
 }
 
 // Initialize performs the bootstrap sequence
@@ -39,14 +43,31 @@ func Initialize() (*State, error) {
 
 	isGit, gitRoot := detectGitRoot(cwd)
 
+	tools := registerTools()
+
+	queryEngine := engine.NewQueryEngine(engine.EngineConfig{
+		Cwd:          cwd,
+		Tools:        tools,
+		Model:        cfg.Model,
+		MaxTokens:    cfg.MaxTokens,
+		MaxBudgetUSD: 0,
+		CustomPrompt: "",
+		AppendPrompt: "",
+		Debug:        false,
+		Verbose:      false,
+	})
+
+	allCommands := commands.RegisterAll(queryEngine, cfg, tools, isGit, gitRoot)
+
 	return &State{
-		Config:   cfg,
-		Auth:     authState,
-		Cwd:      cwd,
-		IsGit:    isGit,
-		GitRoot:  gitRoot,
-		Tools:    registerTools(),
-		Commands: registerCommands(),
+		Config:      cfg,
+		Auth:        authState,
+		Cwd:         cwd,
+		IsGit:       isGit,
+		GitRoot:     gitRoot,
+		Tools:       tools,
+		Commands:    allCommands,
+		QueryEngine: queryEngine,
 	}, nil
 }
 
@@ -65,8 +86,7 @@ func detectGitRoot(cwd string) (bool, string) {
 }
 
 func registerTools() []types.Tool {
-	// Tools are registered here
-	return nil
+	return toolspkg.RegisterTools()
 }
 
 func registerCommands() []types.Command {
