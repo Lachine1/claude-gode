@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"fmt"
 	"os/signal"
 	"syscall"
@@ -28,7 +29,7 @@ func Run(args []string, version, buildTime string) error {
 	}
 
 	// Set up graceful shutdown
-	ctx, stop := signal.NotifyContext(nil, syscall.SIGINT, syscall.SIGTERM)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
 	// Bootstrap: load config, auth, settings
