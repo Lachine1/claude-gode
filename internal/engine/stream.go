@@ -12,6 +12,9 @@ import (
 	"github.com/Lachine1/claude-gode/pkg/types"
 )
 
+// apiHTTPClient is a shared HTTP client for API requests
+var apiHTTPClient = &http.Client{Timeout: 5 * time.Minute}
+
 // streamEventType represents the type of an SSE event
 type streamEventType string
 
@@ -307,14 +310,7 @@ func doAPIRequest(
 		req.Header.Set("anthropic-version", "2024-02-15")
 		req.Header.Set("anthropic-beta", "prompt-caching-2024-07-31")
 
-		client := &http.Client{
-			Timeout: time.Duration(cfg.Timeout) * time.Second,
-		}
-		if cfg.Timeout == 0 {
-			client.Timeout = 5 * time.Minute
-		}
-
-		resp, err := client.Do(req)
+		resp, err := apiHTTPClient.Do(req)
 		if err != nil {
 			lastErr = err
 			continue

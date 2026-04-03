@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -73,11 +74,10 @@ func (m *OAuthManager) ExchangeCode(ctx context.Context, code string) (*OAuthTok
 	data.Set("redirect_uri", oauthCallbackURL)
 	data.Set("client_id", oauthClientID)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", oauthTokenURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", oauthTokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.URL.RawQuery = data.Encode()
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -124,11 +124,10 @@ func (m *OAuthManager) RefreshToken(ctx context.Context) (*OAuthToken, error) {
 	data.Set("refresh_token", token.RefreshToken)
 	data.Set("client_id", oauthClientID)
 
-	req, err := http.NewRequestWithContext(ctx, "POST", oauthTokenURL, nil)
+	req, err := http.NewRequestWithContext(ctx, "POST", oauthTokenURL, strings.NewReader(data.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
-	req.URL.RawQuery = data.Encode()
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	client := &http.Client{Timeout: 30 * time.Second}

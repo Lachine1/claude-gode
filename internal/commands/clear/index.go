@@ -22,12 +22,13 @@ func New() types.Command {
 func handleClear(ctx *types.CommandContext, args []string) error {
 	messages := ctx.GetMessages()
 
-	fmt.Println()
-	fmt.Println("  Clear Conversation")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  Cleared %d messages from history.\n", len(messages))
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  Clear Conversation")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Cleared " + fmt.Sprint(len(messages)) + " messages from history.")
+	w("")
 
 	ctx.SetMessages([]types.Message{})
 

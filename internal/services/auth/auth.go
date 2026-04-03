@@ -15,7 +15,7 @@ type AuthState struct {
 
 // Initialize sets up authentication
 func Initialize(cfg *config.Config) (*AuthState, error) {
-	apiKey := cfg.APIKey
+	apiKey := cfg.APIKey()
 	if apiKey == "" {
 		apiKey = os.Getenv("ANTHROPIC_API_KEY")
 	}

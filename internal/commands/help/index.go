@@ -1,8 +1,6 @@
 package help
 
 import (
-	"fmt"
-
 	"github.com/Lachine1/claude-gode/pkg/types"
 )
 
@@ -15,52 +13,53 @@ func New() types.Command {
 		Usage:       "/help [command]",
 		Handler: func(ctx *types.CommandContext, args []string) error {
 			if len(args) > 0 {
-				return showCommandHelp(args[0])
+				return showCommandHelp(ctx, args[0])
 			}
-			return showGeneralHelp()
+			return showGeneralHelp(ctx)
 		},
 	}
 }
 
-func showGeneralHelp() error {
-	fmt.Println()
-	fmt.Println("  Available Slash Commands")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Println("  Conversation")
-	fmt.Println("    /help, /?, /h              Show this help")
-	fmt.Println("    /clear                     Clear conversation history")
-	fmt.Println("    /compact                   Trigger context compaction")
-	fmt.Println("    /continue                  Continue last session")
-	fmt.Println()
-	fmt.Println("  Configuration")
-	fmt.Println("    /settings                  View/edit settings")
-	fmt.Println("    /config                    Show current config")
-	fmt.Println("    /models                    List and switch models")
-	fmt.Println("    /permission-mode           Change permission mode")
-	fmt.Println("    /memory                    View/edit memory (MEMORY.md)")
-	fmt.Println()
-	fmt.Println("  Information")
-	fmt.Println("    /commands                  List available commands")
-	fmt.Println("    /tools                     List available tools")
-	fmt.Println("    /skills                    List available skills")
-	fmt.Println("    /agents                    List/manage agents")
-	fmt.Println("    /mcp                       MCP server management")
-	fmt.Println("    /usage                     Show token usage and cost")
-	fmt.Println("    /version                   Show version")
-	fmt.Println()
-	fmt.Println("  Workflow")
-	fmt.Println("    /plan                      Enter plan mode")
-	fmt.Println("    /review                    Review changes")
-	fmt.Println("    /commit                    Commit changes with git")
-	fmt.Println("    /init                      Initialize CLAUDE.md")
-	fmt.Println()
-	fmt.Println("  Type /help <command> for more information on a specific command.")
-	fmt.Println()
+func showGeneralHelp(ctx *types.CommandContext) error {
+	w := ctx.WriteOutput
+	w("")
+	w("  Available Slash Commands")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Conversation")
+	w("    /help, /?, /h              Show this help")
+	w("    /clear                     Clear conversation history")
+	w("    /compact                   Trigger context compaction")
+	w("    /continue                  Continue last session")
+	w("")
+	w("  Configuration")
+	w("    /settings                  View/edit settings")
+	w("    /config                    Show current config")
+	w("    /models                    List and switch models")
+	w("    /permission-mode           Change permission mode")
+	w("    /memory                    View/edit memory (MEMORY.md)")
+	w("")
+	w("  Information")
+	w("    /commands                  List available commands")
+	w("    /tools                     List available tools")
+	w("    /skills                    List available skills")
+	w("    /agents                    List/manage agents")
+	w("    /mcp                       MCP server management")
+	w("    /usage                     Show token usage and cost")
+	w("    /version                   Show version")
+	w("")
+	w("  Workflow")
+	w("    /plan                      Enter plan mode")
+	w("    /review                    Review changes")
+	w("    /commit                    Commit changes with git")
+	w("    /init                      Initialize CLAUDE.md")
+	w("")
+	w("  Type /help <command> for more information on a specific command.")
+	w("")
 	return nil
 }
 
-func showCommandHelp(name string) error {
+func showCommandHelp(ctx *types.CommandContext, name string) error {
 	builtins := map[string]struct {
 		desc  string
 		usage string
@@ -89,15 +88,16 @@ func showCommandHelp(name string) error {
 
 	info, ok := builtins[name]
 	if !ok {
-		return fmt.Errorf("unknown command: /%s", name)
+		return &types.CommandError{Message: "unknown command: /" + name}
 	}
 
-	fmt.Println()
-	fmt.Printf("  /%s\n", name)
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  Description: %s\n", info.desc)
-	fmt.Printf("  Usage:       %s\n", info.usage)
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  /" + name)
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Description: " + info.desc)
+	w("  Usage:       " + info.usage)
+	w("")
 	return nil
 }

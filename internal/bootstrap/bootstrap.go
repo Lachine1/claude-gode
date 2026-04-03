@@ -48,13 +48,14 @@ func Initialize() (*State, error) {
 	queryEngine := engine.NewQueryEngine(engine.EngineConfig{
 		Cwd:          cwd,
 		Tools:        tools,
-		Model:        cfg.Model,
-		MaxTokens:    cfg.MaxTokens,
+		Model:        cfg.Model(),
+		MaxTokens:    cfg.MaxTokens(),
 		MaxBudgetUSD: 0,
 		CustomPrompt: "",
 		AppendPrompt: "",
 		Debug:        false,
 		Verbose:      false,
+		APIKey:       authState.APIKey,
 	})
 
 	allCommands := commands.RegisterAll(queryEngine, cfg, tools, isGit, gitRoot)

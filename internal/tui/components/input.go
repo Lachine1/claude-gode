@@ -147,3 +147,19 @@ func (i *Input) Render(width int) string {
 
 	return i.Theme.Input.Width(w).Render(display)
 }
+
+func (i *Input) RenderInline() string {
+	buf := []rune(i.Buffer)
+	cursorPos := i.Cursor
+	if cursorPos > len(buf) {
+		cursorPos = len(buf)
+	}
+
+	if i.Focused {
+		left := string(buf[:cursorPos])
+		right := string(buf[cursorPos:])
+		cursor := i.Theme.InputCursor.Render("█")
+		return left + cursor + right
+	}
+	return i.Buffer
+}

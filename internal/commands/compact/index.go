@@ -26,40 +26,41 @@ func handleCompact(ctx *types.CommandContext, eng *engine.QueryEngine) error {
 		return fmt.Errorf("query engine not initialized")
 	}
 
+	w := ctx.WriteOutput
 	messages := eng.GetMessages()
 	usage := eng.GetUsage()
 	cost := eng.GetTotalCost()
 	tokens := estimateTokens(messages)
 
-	fmt.Println()
-	fmt.Println("  Context Compaction")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  Messages:    %d\n", len(messages))
-	fmt.Printf("  Est. tokens: ~%d\n", tokens)
-	fmt.Printf("  Input:       %d tokens\n", usage.InputTokens)
-	fmt.Printf("  Output:      %d tokens\n", usage.OutputTokens)
-	fmt.Printf("  Cache read:  %d tokens\n", usage.CacheRead)
-	fmt.Printf("  Cache write: %d tokens\n", usage.CacheWrite)
-	fmt.Printf("  Est. cost:   $%.4f\n", cost)
-	fmt.Println()
+	w("")
+	w("  Context Compaction")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w(fmt.Sprintf("  Messages:    %d", len(messages)))
+	w(fmt.Sprintf("  Est. tokens: ~%d", tokens))
+	w(fmt.Sprintf("  Input:       %d tokens", usage.InputTokens))
+	w(fmt.Sprintf("  Output:      %d tokens", usage.OutputTokens))
+	w(fmt.Sprintf("  Cache read:  %d tokens", usage.CacheRead))
+	w(fmt.Sprintf("  Cache write: %d tokens", usage.CacheWrite))
+	w(fmt.Sprintf("  Est. cost:   $%.4f", cost))
+	w("")
 
 	if tokens < 100000 {
-		fmt.Println("  Context is within limits. No compaction needed.")
-		fmt.Println()
+		w("  Context is within limits. No compaction needed.")
+		w("")
 		return nil
 	}
 
-	fmt.Println("  Running compaction...")
+	w("  Running compaction...")
 	if err := eng.Compact(context.Background()); err != nil {
-		fmt.Printf("  Compaction error: %v\n", err)
-		fmt.Println()
+		w("  Compaction error: " + err.Error())
+		w("")
 		return nil
 	}
 
 	newMessages := eng.GetMessages()
-	fmt.Printf("  Compaction complete. Messages: %d -> %d\n", len(messages), len(newMessages))
-	fmt.Println()
+	w(fmt.Sprintf("  Compaction complete. Messages: %d -> %d", len(messages), len(newMessages)))
+	w("")
 	return nil
 }
 

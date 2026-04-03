@@ -26,56 +26,60 @@ func handleSkills(ctx *types.CommandContext, args []string) error {
 	skillDirs := findSkillDirectories(ctx.Cwd)
 
 	if len(args) > 0 {
-		return showSkillDetail(args[0], skillDirs)
+		return showSkillDetail(ctx, args[0], skillDirs)
 	}
-	return listSkills(skillDirs)
+	return listSkills(ctx, skillDirs)
 }
 
-func listSkills(skillDirs []string) error {
-	fmt.Println()
-	fmt.Println("  Available Skills")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
+func listSkills(ctx *types.CommandContext, skillDirs []string) error {
+	w := ctx.WriteOutput
+	w("")
+	w("  Available Skills")
+	w("  ═══════════════════════════════════════")
+	w("")
 
 	if len(skillDirs) == 0 {
-		fmt.Println("  No skills found.")
-		fmt.Println("  Skills are defined in AGENTS.md or .claude/skills/ directory.")
+		w("  No skills found.")
+		w("  Skills are defined in AGENTS.md or .claude/skills/ directory.")
 	} else {
 		for _, dir := range skillDirs {
 			name := filepath.Base(dir)
 			desc := readSkillDescription(dir)
-			fmt.Printf("  %-25s %s\n", name, desc)
+			w(fmt.Sprintf("  %-25s %s", name, desc))
 		}
 	}
 
-	fmt.Printf("\n  Total: %d skill(s)\n", len(skillDirs))
-	fmt.Println()
-	fmt.Println("  Use /skills <skill-name> for more details.")
-	fmt.Println()
+	w("")
+	w(fmt.Sprintf("  Total: %d skill(s)", len(skillDirs)))
+	w("")
+	w("  Use /skills <skill-name> for more details.")
+	w("")
 	return nil
 }
 
-func showSkillDetail(name string, skillDirs []string) error {
+func showSkillDetail(ctx *types.CommandContext, name string, skillDirs []string) error {
 	for _, dir := range skillDirs {
 		if filepath.Base(dir) == name {
 			desc := readSkillDescription(dir)
-			fmt.Println()
-			fmt.Printf("  Skill: %s\n", name)
-			fmt.Println("  ═══════════════════════════════════════")
-			fmt.Println()
-			fmt.Printf("  Description: %s\n\n", desc)
+			w := ctx.WriteOutput
+			w("")
+			w("  Skill: " + name)
+			w("  ═══════════════════════════════════════")
+			w("")
+			w("  Description: " + desc)
+			w("")
 
 			entries, err := os.ReadDir(dir)
 			if err == nil {
-				fmt.Println("  Files:")
+				w("  Files:")
 				for _, entry := range entries {
 					if !entry.IsDir() {
-						fmt.Printf("    - %s\n", entry.Name())
+						w("    - " + entry.Name())
 					}
 				}
 			}
 
-			fmt.Println()
+			w("")
 			return nil
 		}
 	}

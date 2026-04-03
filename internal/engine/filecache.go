@@ -44,8 +44,8 @@ func NewFileStateCache() *FileStateCache {
 
 // Get retrieves a cached file entry. Returns nil if not found or expired.
 func (c *FileStateCache) Get(path string) *FileEntry {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+	c.mu.RLock()
+	defer c.mu.RUnlock()
 
 	entry, ok := c.entries[path]
 	if !ok {
@@ -53,13 +53,9 @@ func (c *FileStateCache) Get(path string) *FileEntry {
 	}
 
 	if time.Since(entry.LastAccess) > cacheTTL {
-		c.remove(path)
 		return nil
 	}
 
-	entry.LastAccess = time.Now()
-	entry.ReadCount++
-	c.moveToFront(path)
 	return entry
 }
 

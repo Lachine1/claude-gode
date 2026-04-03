@@ -17,40 +17,48 @@ func New(cfg *svcconfig.Config) types.Command {
 		Description: "Show current config",
 		Usage:       "/config",
 		Handler: func(ctx *types.CommandContext, args []string) error {
-			return handleConfig(cfg, args)
+			return handleConfig(ctx, cfg, args)
 		},
 	}
 }
 
-func handleConfig(cfg *svcconfig.Config, args []string) error {
-	fmt.Println()
-	fmt.Println("  Current Configuration")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  %-25s %s\n", "Model:", cfg.Model)
-	fmt.Printf("  %-25s %d\n", "Max Tokens:", cfg.MaxTokens)
-	fmt.Printf("  %-25s %s\n", "Permission Mode:", cfg.PermissionMode)
+func handleConfig(ctx *types.CommandContext, cfg *svcconfig.Config, args []string) error {
+	w := ctx.WriteOutput
+	w("")
+	w("  Current Configuration")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w(fmt.Sprintf("  %-25s %s", "Model:", cfg.Model()))
+	w(fmt.Sprintf("  %-25s %d", "Max Tokens:", cfg.MaxTokens()))
+	w(fmt.Sprintf("  %-25s %s", "Permission Mode:", cfg.PermissionMode()))
 
-	if cfg.APIKey != "" {
-		masked := cfg.APIKey[:4] + "..." + cfg.APIKey[len(cfg.APIKey)-4:]
-		fmt.Printf("  %-25s %s\n", "API Key:", masked)
+	apiKey := cfg.APIKey()
+	if apiKey != "" {
+		var masked string
+		if len(apiKey) <= 8 {
+			masked = "****"
+		} else {
+			masked = apiKey[:4] + "..." + apiKey[len(apiKey)-4:]
+		}
+		w(fmt.Sprintf("  %-25s %s", "API Key:", masked))
 	} else {
-		fmt.Printf("  %-25s %s\n", "API Key:", "(not set)")
+		w(fmt.Sprintf("  %-25s %s", "API Key:", "(not set)"))
 	}
 
-	if len(cfg.Settings) > 0 {
-		fmt.Println()
-		fmt.Println("  Settings:")
-		for k, v := range cfg.Settings {
-			fmt.Printf("    %-23s %v\n", k, v)
+	settings := cfg.All()
+	if len(settings) > 0 {
+		w("")
+		w("  Settings:")
+		for k, v := range settings {
+			w(fmt.Sprintf("    %-23s %v", k, v))
 		}
 	}
 
-	fmt.Println()
+	w("")
 
 	configPath := filepath.Join(homeDir(), ".claude", "settings.json")
-	fmt.Printf("  Config file: %s\n", configPath)
-	fmt.Println()
+	w(fmt.Sprintf("  Config file: %s", configPath))
+	w("")
 	return nil
 }
 
@@ -58,5 +66,11 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
-	return os.Getenv("USERPROFILE")
+	if h := os.Getenv("USERPROFILE"); h != "" {
+		return h
+	}
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir
+	}
+	return "."
 }

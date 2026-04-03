@@ -146,7 +146,13 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
-	return os.Getenv("USERPROFILE")
+	if h := os.Getenv("USERPROFILE"); h != "" {
+		return h
+	}
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir
+	}
+	return "."
 }
 
 // DefaultConfig returns a minimal config for auth operations

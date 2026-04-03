@@ -113,6 +113,13 @@ func (t *EditTool) Execute(ctx *types.ToolContext, input json.RawMessage, progre
 	// Count occurrences
 	count := strings.Count(originalContent, params.OldString)
 
+	if count > 1 {
+		return &types.ToolResult[json.RawMessage]{
+			IsError:      true,
+			ErrorMessage: fmt.Sprintf("old_string appears %d times in %s. Please provide more context to uniquely identify the text to replace.", count, params.Path),
+		}, nil
+	}
+
 	// Perform replacement
 	newContent := strings.ReplaceAll(originalContent, params.OldString, params.NewString)
 

@@ -17,5 +17,15 @@ type CommandContext struct {
 	Cwd         string
 	GetMessages func() []Message
 	SetMessages func([]Message)
+	WriteOutput func(string)
 	Debug       bool
+}
+
+// CommandError represents an error from command execution
+type CommandError struct {
+	Message string
+}
+
+func (e *CommandError) Error() string {
+	return e.Message
 }

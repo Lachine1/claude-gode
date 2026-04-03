@@ -41,21 +41,22 @@ func New(cfg *svcconfig.Config) types.Command {
 
 func handlePermissionMode(ctx *types.CommandContext, args []string, cfg *svcconfig.Config) error {
 	if len(args) == 0 {
-		return showPermissionModes(cfg)
+		return showPermissionModes(ctx, cfg)
 	}
-	return setPermissionMode(cfg, args[0])
+	return setPermissionMode(ctx, cfg, args[0])
 }
 
-func showPermissionModes(cfg *svcconfig.Config) error {
-	currentMode := cfg.PermissionMode
+func showPermissionModes(ctx *types.CommandContext, cfg *svcconfig.Config) error {
+	currentMode := cfg.PermissionMode()
 	if currentMode == "" {
 		currentMode = "default"
 	}
 
-	fmt.Println()
-	fmt.Println("  Permission Modes")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  Permission Modes")
+	w("  ═══════════════════════════════════════")
+	w("")
 
 	for _, mode := range validModes {
 		marker := " "
@@ -63,16 +64,16 @@ func showPermissionModes(cfg *svcconfig.Config) error {
 			marker = "→"
 		}
 		desc := modeDescriptions[mode]
-		fmt.Printf("  %s %-25s %s\n", marker, mode, desc)
+		w(fmt.Sprintf("  %s %-25s %s", marker, mode, desc))
 	}
 
-	fmt.Println()
-	fmt.Println("  Use /permission-mode <mode> to change.")
-	fmt.Println()
+	w("")
+	w("  Use /permission-mode <mode> to change.")
+	w("")
 	return nil
 }
 
-func setPermissionMode(cfg *svcconfig.Config, mode string) error {
+func setPermissionMode(ctx *types.CommandContext, cfg *svcconfig.Config, mode string) error {
 	valid := false
 	for _, m := range validModes {
 		if m == mode {
@@ -81,10 +82,10 @@ func setPermissionMode(cfg *svcconfig.Config, mode string) error {
 		}
 	}
 	if !valid {
-		return fmt.Errorf("invalid permission mode: %s\nValid modes: %s", mode, validModes)
+		return fmt.Errorf("invalid permission mode: %s\nValid modes: %v", mode, validModes)
 	}
 
-	cfg.PermissionMode = mode
+	cfg.Set("permission_mode", mode)
 
 	settingsPath := filepath.Join(homeDir(), ".claude", "settings.json")
 	settings := loadSettings(settingsPath)
@@ -94,7 +95,8 @@ func setPermissionMode(cfg *svcconfig.Config, mode string) error {
 		return fmt.Errorf("failed to save settings: %w", err)
 	}
 
-	fmt.Printf("  Permission mode set to: %s\n", mode)
+	w := ctx.WriteOutput
+	w("  Permission mode set to: " + mode)
 	return nil
 }
 
@@ -124,5 +126,11 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
-	return os.Getenv("USERPROFILE")
+	if h := os.Getenv("USERPROFILE"); h != "" {
+		return h
+	}
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir
+	}
+	return "."
 }

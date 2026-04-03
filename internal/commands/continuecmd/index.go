@@ -1,7 +1,6 @@
 package continuecmd
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 
@@ -24,27 +23,28 @@ func New() types.Command {
 func handleContinue(ctx *types.CommandContext, args []string) error {
 	sessionPath := filepath.Join(homeDir(), ".claude", "sessions", "last.json")
 
-	fmt.Println()
-	fmt.Println("  Continue Session")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  Continue Session")
+	w("  ═══════════════════════════════════════")
+	w("")
 
 	data, err := os.ReadFile(sessionPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("  No previous session found.")
-			fmt.Println("  Sessions are saved automatically when exiting.")
+			w("  No previous session found.")
+			w("  Sessions are saved automatically when exiting.")
 		} else {
-			fmt.Printf("  Error reading session: %v\n", err)
+			w("  Error reading session: " + err.Error())
 		}
-		fmt.Println()
+		w("")
 		return nil
 	}
 
 	_ = data
-	fmt.Println("  Session data found.")
-	fmt.Println("  Loading previous conversation context...")
-	fmt.Println()
+	w("  Session data found.")
+	w("  Loading previous conversation context...")
+	w("")
 	return nil
 }
 
@@ -52,5 +52,11 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
-	return os.Getenv("USERPROFILE")
+	if h := os.Getenv("USERPROFILE"); h != "" {
+		return h
+	}
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir
+	}
+	return "."
 }

@@ -14,11 +14,13 @@ type UserMessage struct {
 }
 
 func (m UserMessage) Render(width int) string {
-	w := width - 4
+	w := width - 2
 	if w < 20 {
 		w = 20
 	}
-	return m.Theme.UserMessage.Width(w).Render(m.Content)
+	prefix := m.Theme.UserMessagePrefix.Render("You: ")
+	content := m.Theme.UserMessage.Render(m.Content)
+	return lipgloss.NewStyle().Width(w).Render(prefix + content)
 }
 
 type AssistantMessage struct {
@@ -27,11 +29,24 @@ type AssistantMessage struct {
 }
 
 func (m AssistantMessage) Render(width int) string {
-	w := width - 4
+	w := width - 2
 	if w < 20 {
 		w = 20
 	}
 	return m.Theme.AssistantMessage.Width(w).Render(m.Content)
+}
+
+type CommandOutputMessage struct {
+	Content string
+	Theme   styles.Theme
+}
+
+func (m CommandOutputMessage) Render(width int) string {
+	w := width - 2
+	if w < 20 {
+		w = 20
+	}
+	return m.Theme.CommandOutput.Width(w).Render(m.Content)
 }
 
 type ToolCallDisplay struct {
@@ -199,15 +214,17 @@ func (ml MessageList) Render(width int) string {
 		ml.Height = 20
 	}
 
-	var lines []string
+	var rendered []string
 	for _, msg := range ml.Messages {
 		switch msg.Type {
 		case "user":
-			lines = append(lines, UserMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
+			rendered = append(rendered, UserMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
 		case "assistant":
-			lines = append(lines, AssistantMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
+			rendered = append(rendered, AssistantMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
+		case "command_output":
+			rendered = append(rendered, CommandOutputMessage{Content: msg.Content, Theme: msg.Theme}.Render(width))
 		case "tool_call":
-			lines = append(lines, ToolCallDisplay{
+			rendered = append(rendered, ToolCallDisplay{
 				ToolName:  msg.ToolName,
 				Input:     msg.Content,
 				ToolUseID: msg.ToolID,
@@ -216,7 +233,7 @@ func (ml MessageList) Render(width int) string {
 				Spinner:   msg.Spinner,
 			}.Render(width))
 		case "tool_result":
-			lines = append(lines, ToolResultDisplay{
+			rendered = append(rendered, ToolResultDisplay{
 				ToolName:  msg.ToolName,
 				ToolUseID: msg.ToolID,
 				Output:    msg.Output,
@@ -225,17 +242,17 @@ func (ml MessageList) Render(width int) string {
 				Theme:     msg.Theme,
 			}.Render(width))
 		case "thinking":
-			lines = append(lines, ThinkingBlock{
+			rendered = append(rendered, ThinkingBlock{
 				Content:   msg.Content,
 				Collapsed: msg.Collapsed,
 				Theme:     msg.Theme,
 			}.Render(width))
 		case "error":
-			lines = append(lines, msg.Theme.Error.Render(fmt.Sprintf("Error: %s", msg.Content)))
+			rendered = append(rendered, msg.Theme.Error.Render("Error: "+msg.Content))
 		}
 	}
 
-	allContent := strings.Join(lines, "\n")
+	allContent := strings.Join(rendered, "\n")
 	totalLines := strings.Count(allContent, "\n") + 1
 
 	if totalLines <= ml.Height {

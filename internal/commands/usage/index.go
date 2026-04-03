@@ -31,20 +31,21 @@ func handleUsage(ctx *types.CommandContext, eng *engine.QueryEngine) error {
 		messages = len(eng.GetMessages())
 	}
 
-	fmt.Println()
-	fmt.Println("  Session Usage")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  Messages:      %d\n", messages)
-	fmt.Printf("  Input tokens:  %d\n", usage.InputTokens)
-	fmt.Printf("  Output tokens: %d\n", usage.OutputTokens)
-	fmt.Printf("  Cache read:    %d\n", usage.CacheRead)
-	fmt.Printf("  Cache write:   %d\n", usage.CacheWrite)
+	w := ctx.WriteOutput
+	w("")
+	w("  Session Usage")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w(fmt.Sprintf("  Messages:      %d", messages))
+	w(fmt.Sprintf("  Input tokens:  %d", usage.InputTokens))
+	w(fmt.Sprintf("  Output tokens: %d", usage.OutputTokens))
+	w(fmt.Sprintf("  Cache read:    %d", usage.CacheRead))
+	w(fmt.Sprintf("  Cache write:   %d", usage.CacheWrite))
 
 	totalTokens := usage.InputTokens + usage.OutputTokens
-	fmt.Printf("  Total tokens:  %d\n", totalTokens)
-	fmt.Println()
-	fmt.Printf("  Estimated cost: $%.4f\n", totalCost)
-	fmt.Println()
+	w(fmt.Sprintf("  Total tokens:  %d", totalTokens))
+	w("")
+	w(fmt.Sprintf("  Estimated cost: $%.4f", totalCost))
+	w("")
 	return nil
 }

@@ -42,46 +42,49 @@ func handleReview(ctx *types.CommandContext, args []string, isGit bool, gitRoot 
 	}
 
 	if len(statusOutput) == 0 {
-		fmt.Println()
-		fmt.Println("  No changes to review. Working tree is clean.")
-		fmt.Println()
+		ctx.WriteOutput("")
+		ctx.WriteOutput("  No changes to review. Working tree is clean.")
+		ctx.WriteOutput("")
 		return nil
 	}
 
-	fmt.Println()
-	fmt.Println("  Review Changes")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Println("  Changed files:")
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  Review Changes")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Changed files:")
+	w("")
 
 	lines := strings.Split(strings.TrimSpace(string(statusOutput)), "\n")
 	for _, line := range lines {
 		if len(strings.TrimSpace(line)) > 0 {
-			fmt.Printf("    %s\n", strings.TrimSpace(line))
+			w("    " + strings.TrimSpace(line))
 		}
 	}
 
-	fmt.Printf("\n  Total: %d changed file(s)\n", len(lines))
-	fmt.Println()
+	w("")
+	w(fmt.Sprintf("  Total: %d changed file(s)", len(lines)))
+	w("")
 
 	if len(args) > 0 {
 		fileName := args[0]
 		diffCmd := exec.Command("git", "-C", cwd, "diff", "--", fileName)
 		diffOutput, err := diffCmd.Output()
 		if err == nil && len(diffOutput) > 0 {
-			fmt.Printf("  Diff for %s:\n\n", fileName)
+			w("  Diff for " + fileName + ":")
+			w("")
 			diffLines := strings.Split(string(diffOutput), "\n")
 			maxLines := 50
 			if len(diffLines) > maxLines {
 				diffLines = diffLines[:maxLines]
-				fmt.Println("    (showing first 50 lines)")
-				fmt.Println()
+				w("    (showing first 50 lines)")
+				w("")
 			}
 			for _, line := range diffLines {
-				fmt.Printf("    %s\n", line)
+				w("    " + line)
 			}
-			fmt.Println()
+			w("")
 		}
 	}
 

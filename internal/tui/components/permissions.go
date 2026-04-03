@@ -61,6 +61,9 @@ func (p *PermissionDialog) MoveDown() {
 }
 
 func (p *PermissionDialog) Confirm() {
+	if p.Callback == nil {
+		return
+	}
 	switch p.Selected {
 	case 0:
 		p.Callback(PermissionAllowOnce)

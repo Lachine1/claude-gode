@@ -359,7 +359,17 @@ func (t *mcpTool) Execute(ctx *types.ToolContext, input json.RawMessage, progres
 		}, nil
 	}
 
-	result, err := t.server.CallTool(context.Background(), t.name, args)
+	abortCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() {
+		select {
+		case <-ctx.AbortSignal:
+			cancel()
+		case <-abortCtx.Done():
+		}
+	}()
+
+	result, err := t.server.CallTool(abortCtx, t.name, args)
 	if err != nil {
 		return nil, fmt.Errorf("tool execution failed: %w", err)
 	}

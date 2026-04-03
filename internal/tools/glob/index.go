@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Lachine1/claude-gode/pkg/types"
 )
@@ -106,9 +107,7 @@ func (t *GlobTool) Execute(ctx *types.ToolContext, input json.RawMessage, progre
 		}, nil
 	}
 
-	globPattern := filepath.Join(searchPath, params.Pattern)
-
-	matches, err := filepath.Glob(globPattern)
+	matches, err := globWalk(searchPath, params.Pattern)
 	if err != nil {
 		return &types.ToolResult[json.RawMessage]{
 			IsError:      true,
@@ -138,4 +137,79 @@ func (t *GlobTool) Execute(ctx *types.ToolContext, input json.RawMessage, progre
 	return &types.ToolResult[json.RawMessage]{
 		Data: resultJSON,
 	}, nil
+}
+
+// globWalk walks the directory tree and matches files against the pattern.
+// It supports ** patterns which match zero or more directories.
+func globWalk(root string, pattern string) ([]string, error) {
+	pattern = filepath.ToSlash(pattern)
+	segments := strings.Split(pattern, "/")
+
+	var matches []string
+
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+
+		rel, err := filepath.Rel(root, path)
+		if err != nil {
+			return nil
+		}
+
+		if rel == "." {
+			return nil
+		}
+
+		relSlash := filepath.ToSlash(rel)
+		relSegments := strings.Split(relSlash, "/")
+
+		if matchSegments(segments, relSegments) {
+			matches = append(matches, path)
+		}
+
+		return nil
+	})
+
+	return matches, err
+}
+
+// matchSegments checks if the pattern segments match the path segments.
+// It supports ** which matches zero or more path segments.
+func matchSegments(patternSegs, pathSegs []string) bool {
+	return matchRecursive(patternSegs, 0, pathSegs, 0)
+}
+
+// matchRecursive recursively matches pattern segments against path segments.
+func matchRecursive(patternSegs []string, pi int, pathSegs []string, si int) bool {
+	for pi < len(patternSegs) {
+		pat := patternSegs[pi]
+
+		if pat == "**" {
+			pi++
+			if pi == len(patternSegs) {
+				return true
+			}
+			for i := si; i <= len(pathSegs); i++ {
+				if matchRecursive(patternSegs, pi, pathSegs, i) {
+					return true
+				}
+			}
+			return false
+		}
+
+		if si >= len(pathSegs) {
+			return false
+		}
+
+		matched, err := filepath.Match(pat, pathSegs[si])
+		if err != nil || !matched {
+			return false
+		}
+
+		pi++
+		si++
+	}
+
+	return si == len(pathSegs)
 }

@@ -23,15 +23,16 @@ func New() types.Command {
 
 func handleInit(ctx *types.CommandContext, args []string) error {
 	claudePath := filepath.Join(ctx.Cwd, "CLAUDE.md")
+	w := ctx.WriteOutput
 
 	if _, err := os.Stat(claudePath); err == nil {
-		fmt.Println()
-		fmt.Println("  Initialize CLAUDE.md")
-		fmt.Println("  ═══════════════════════════════════════")
-		fmt.Println()
-		fmt.Printf("  CLAUDE.md already exists at %s\n", claudePath)
-		fmt.Println("  Edit it directly to update project instructions.")
-		fmt.Println()
+		w("")
+		w("  Initialize CLAUDE.md")
+		w("  ═══════════════════════════════════════")
+		w("")
+		w("  CLAUDE.md already exists at " + claudePath)
+		w("  Edit it directly to update project instructions.")
+		w("")
 		return nil
 	}
 
@@ -57,13 +58,13 @@ func handleInit(ctx *types.CommandContext, args []string) error {
 		return fmt.Errorf("failed to create CLAUDE.md: %w", err)
 	}
 
-	fmt.Println()
-	fmt.Println("  Initialize CLAUDE.md")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  Created CLAUDE.md at %s\n", claudePath)
-	fmt.Println("  Edit the file to add project-specific instructions.")
-	fmt.Println("  The AI will follow these guidelines when working on this project.")
-	fmt.Println()
+	w("")
+	w("  Initialize CLAUDE.md")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Created CLAUDE.md at " + claudePath)
+	w("  Edit the file to add project-specific instructions.")
+	w("  The AI will follow these guidelines when working on this project.")
+	w("")
 	return nil
 }

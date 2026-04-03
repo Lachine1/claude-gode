@@ -35,25 +35,26 @@ func New(cfg *svcconfig.Config) types.Command {
 		Description: "List and switch models",
 		Usage:       "/models [model-name]",
 		Handler: func(ctx *types.CommandContext, args []string) error {
-			return handleModels(cfg, args)
+			return handleModels(ctx, cfg, args)
 		},
 	}
 }
 
-func handleModels(cfg *svcconfig.Config, args []string) error {
+func handleModels(ctx *types.CommandContext, cfg *svcconfig.Config, args []string) error {
 	if len(args) > 0 {
-		return switchModel(cfg, args[0])
+		return switchModel(ctx, cfg, args[0])
 	}
-	return listModels(cfg)
+	return listModels(ctx, cfg)
 }
 
-func listModels(cfg *svcconfig.Config) error {
-	currentModel := cfg.Model
+func listModels(ctx *types.CommandContext, cfg *svcconfig.Config) error {
+	currentModel := cfg.Model()
+	w := ctx.WriteOutput
 
-	fmt.Println()
-	fmt.Println("  Available Models")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
+	w("")
+	w("  Available Models")
+	w("  ═══════════════════════════════════════")
+	w("")
 
 	for _, model := range availableModels {
 		marker := " "
@@ -61,16 +62,17 @@ func listModels(cfg *svcconfig.Config) error {
 			marker = "→"
 		}
 		desc := modelDescriptions[model]
-		fmt.Printf("  %s %-35s %s\n", marker, model, desc)
+		w(fmt.Sprintf("  %s %-35s %s", marker, model, desc))
 	}
 
-	fmt.Println()
-	fmt.Println("  Use /models <model-name> to switch.")
-	fmt.Println()
+	w("")
+	w("  Use /models <model-name> to switch.")
+	w("")
 	return nil
 }
 
-func switchModel(cfg *svcconfig.Config, modelName string) error {
+func switchModel(ctx *types.CommandContext, cfg *svcconfig.Config, modelName string) error {
+	w := ctx.WriteOutput
 	found := false
 	for _, m := range availableModels {
 		if m == modelName {
@@ -82,6 +84,8 @@ func switchModel(cfg *svcconfig.Config, modelName string) error {
 		return fmt.Errorf("unknown model: %s\nAvailable models: %s", modelName, strings.Join(availableModels, ", "))
 	}
 
+	cfg.Set("model", modelName)
+
 	settingsPath := filepath.Join(homeDir(), ".claude", "settings.json")
 	settings := loadSettings(settingsPath)
 	settings["model"] = modelName
@@ -90,7 +94,7 @@ func switchModel(cfg *svcconfig.Config, modelName string) error {
 		return fmt.Errorf("failed to save settings: %w", err)
 	}
 
-	fmt.Printf("  Switched to model: %s\n", modelName)
+	w("  Switched to model: " + modelName)
 	return nil
 }
 
@@ -120,5 +124,11 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
-	return os.Getenv("USERPROFILE")
+	if h := os.Getenv("USERPROFILE"); h != "" {
+		return h
+	}
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir
+	}
+	return "."
 }

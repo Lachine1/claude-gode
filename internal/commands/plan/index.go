@@ -1,8 +1,6 @@
 package plan
 
 import (
-	"fmt"
-
 	"github.com/Lachine1/claude-gode/pkg/types"
 )
 
@@ -20,18 +18,19 @@ func New() types.Command {
 }
 
 func handlePlan(ctx *types.CommandContext, args []string) error {
-	fmt.Println()
-	fmt.Println("  Plan Mode")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Println("  Switched to plan mode.")
-	fmt.Println()
-	fmt.Println("  In plan mode, the assistant will:")
-	fmt.Println("  • Analyze the task and propose a plan")
-	fmt.Println("  • Not execute any tools or make changes")
-	fmt.Println("  • Wait for your approval before proceeding")
-	fmt.Println()
-	fmt.Println("  Use /plan to exit plan mode and return to normal.")
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  Plan Mode")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Switched to plan mode.")
+	w("")
+	w("  In plan mode, the assistant will:")
+	w("  • Analyze the task and propose a plan")
+	w("  • Not execute any tools or make changes")
+	w("  • Wait for your approval before proceeding")
+	w("")
+	w("  Use /plan to exit plan mode and return to normal.")
+	w("")
 	return nil
 }

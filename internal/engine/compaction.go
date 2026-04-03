@@ -143,6 +143,7 @@ Conversation:
 	}
 
 	apiCfg := &types.APIConfig{
+		APIKey:     e.config.APIKey,
 		Model:      e.config.Model,
 		MaxTokens:  4096,
 		MaxRetries: 2,

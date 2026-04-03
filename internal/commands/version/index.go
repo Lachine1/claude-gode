@@ -1,7 +1,6 @@
 package version
 
 import (
-	"fmt"
 	"runtime"
 
 	"github.com/Lachine1/claude-gode/pkg/types"
@@ -21,16 +20,17 @@ func New() types.Command {
 }
 
 func handleVersion(ctx *types.CommandContext, args []string) error {
-	fmt.Println()
-	fmt.Println("  Claude Code (Go)")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  Version:   %s\n", types.Version)
+	w := ctx.WriteOutput
+	w("")
+	w("  Claude Code (Go)")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Version:   " + types.Version)
 	if types.BuildTime != "" {
-		fmt.Printf("  Built:     %s\n", types.BuildTime)
+		w("  Built:     " + types.BuildTime)
 	}
-	fmt.Printf("  Go:        %s\n", runtime.Version())
-	fmt.Printf("  OS/Arch:   %s/%s\n", runtime.GOOS, runtime.GOARCH)
-	fmt.Println()
+	w("  Go:        " + runtime.Version())
+	w("  OS/Arch:   " + runtime.GOOS + "/" + runtime.GOARCH)
+	w("")
 	return nil
 }

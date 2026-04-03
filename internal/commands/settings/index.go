@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	svcconfig "github.com/Lachine1/claude-gode/internal/services/config"
 	"github.com/Lachine1/claude-gode/pkg/types"
@@ -19,65 +18,72 @@ func New(cfg *svcconfig.Config) types.Command {
 		Description: "View/edit settings",
 		Usage:       "/settings [key] [value]",
 		Handler: func(ctx *types.CommandContext, args []string) error {
-			return handleSettings(cfg, args)
+			return handleSettings(ctx, cfg, args)
 		},
 	}
 }
 
-func handleSettings(cfg *svcconfig.Config, args []string) error {
+func handleSettings(ctx *types.CommandContext, cfg *svcconfig.Config, args []string) error {
 	settingsPath := filepath.Join(homeDir(), ".claude", "settings.json")
 
 	if len(args) == 0 {
-		return showSettings(cfg, settingsPath)
+		return showSettings(ctx, cfg, settingsPath)
 	}
 
 	if len(args) == 1 {
-		return getSetting(settingsPath, args[0])
+		return getSetting(ctx, settingsPath, args[0])
 	}
 
-	return setSetting(settingsPath, args[0], strings.Join(args[1:], " "))
+	value := args[1]
+	for _, a := range args[2:] {
+		value += " " + a
+	}
+	return setSetting(ctx, settingsPath, args[0], value)
 }
 
-func showSettings(cfg *svcconfig.Config, path string) error {
+func showSettings(ctx *types.CommandContext, cfg *svcconfig.Config, path string) error {
 	settings := loadSettings(path)
+	w := ctx.WriteOutput
 
-	fmt.Println()
-	fmt.Println("  Settings")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Printf("  %-25s %s\n", "Model:", cfg.Model)
-	fmt.Printf("  %-25s %d\n", "Max Tokens:", cfg.MaxTokens)
-	fmt.Printf("  %-25s %s\n", "Permission Mode:", cfg.PermissionMode)
-	fmt.Println()
+	w("")
+	w("  Settings")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w(fmt.Sprintf("  %-25s %s", "Model:", cfg.Model()))
+	w(fmt.Sprintf("  %-25s %d", "Max Tokens:", cfg.MaxTokens()))
+	w(fmt.Sprintf("  %-25s %s", "Permission Mode:", cfg.PermissionMode()))
+	w("")
 
 	if len(settings) > 0 {
-		fmt.Println("  Custom Settings:")
+		w("  Custom Settings:")
 		for k, v := range settings {
-			fmt.Printf("    %-23s %v\n", k, v)
+			w(fmt.Sprintf("    %-23s %v", k, v))
 		}
-		fmt.Println()
+		w("")
 	}
 
-	fmt.Println("  Use /settings <key> <value> to set a value.")
-	fmt.Println("  Use /settings <key> to view a specific value.")
-	fmt.Println()
+	w("  Use /settings <key> <value> to set a value.")
+	w("  Use /settings <key> to view a specific value.")
+	w("")
 	return nil
 }
 
-func getSetting(path, key string) error {
+func getSetting(ctx *types.CommandContext, path, key string) error {
 	settings := loadSettings(path)
+	w := ctx.WriteOutput
 
 	val, ok := settings[key]
 	if !ok {
-		fmt.Printf("  Setting '%s' not found.\n", key)
+		w("  Setting '" + key + "' not found.")
 		return nil
 	}
 
-	fmt.Printf("  %s = %v\n", key, val)
+	w(fmt.Sprintf("  %s = %v", key, val))
 	return nil
 }
 
-func setSetting(path, key, value string) error {
+func setSetting(ctx *types.CommandContext, path, key, value string) error {
+	w := ctx.WriteOutput
 	settings := loadSettings(path)
 	settings[key] = value
 
@@ -85,7 +91,7 @@ func setSetting(path, key, value string) error {
 		return fmt.Errorf("failed to save settings: %w", err)
 	}
 
-	fmt.Printf("  Set %s = %s\n", key, value)
+	w("  Set " + key + " = " + value)
 	return nil
 }
 
@@ -119,5 +125,11 @@ func homeDir() string {
 	if h := os.Getenv("HOME"); h != "" {
 		return h
 	}
-	return os.Getenv("USERPROFILE")
+	if h := os.Getenv("USERPROFILE"); h != "" {
+		return h
+	}
+	if dir, err := os.UserHomeDir(); err == nil {
+		return dir
+	}
+	return "."
 }

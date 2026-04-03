@@ -14,23 +14,24 @@ func New(toolList []types.Tool) types.Command {
 		Description: "List available tools",
 		Usage:       "/tools",
 		Handler: func(ctx *types.CommandContext, args []string) error {
-			return handleTools(toolList, args)
+			return handleTools(ctx, toolList, args)
 		},
 	}
 }
 
-func handleTools(toolList []types.Tool, args []string) error {
-	fmt.Println()
-	fmt.Println("  Available Tools")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
+func handleTools(ctx *types.CommandContext, toolList []types.Tool, args []string) error {
+	w := ctx.WriteOutput
+	w("")
+	w("  Available Tools")
+	w("  ═══════════════════════════════════════")
+	w("")
 
 	for _, tool := range toolList {
-		fmt.Printf("  %-20s %s\n", tool.Name(), tool.Description())
+		w(fmt.Sprintf("  %-20s %s", tool.Name(), tool.Description()))
 	}
 
-	fmt.Println()
-	fmt.Printf("  Total: %d tools\n", len(toolList))
-	fmt.Println()
+	w("")
+	w(fmt.Sprintf("  Total: %d tools", len(toolList)))
+	w("")
 	return nil
 }

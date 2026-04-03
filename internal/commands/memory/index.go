@@ -31,30 +31,31 @@ func handleMemory(ctx *types.CommandContext, action string) error {
 
 	switch action {
 	case "show":
-		return showMemory(memoryPath)
+		return showMemory(ctx, memoryPath)
 	case "edit":
-		return editMemory(memoryPath)
+		return editMemory(ctx, memoryPath)
 	case "clear":
-		return clearMemory(memoryPath)
+		return clearMemory(ctx, memoryPath)
 	default:
 		return fmt.Errorf("unknown memory action: %s (use show, edit, or clear)", action)
 	}
 }
 
-func showMemory(path string) error {
-	fmt.Println()
-	fmt.Println("  Memory (MEMORY.md)")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
+func showMemory(ctx *types.CommandContext, path string) error {
+	w := ctx.WriteOutput
+	w("")
+	w("  Memory (MEMORY.md)")
+	w("  ═══════════════════════════════════════")
+	w("")
 
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			fmt.Println("  No MEMORY.md found. Create one with /memory edit")
+			w("  No MEMORY.md found. Create one with /memory edit")
 		} else {
-			fmt.Printf("  Error reading memory: %v\n", err)
+			w("  Error reading memory: " + err.Error())
 		}
-		fmt.Println()
+		w("")
 		return nil
 	}
 
@@ -63,17 +64,18 @@ func showMemory(path string) error {
 	maxLines := 50
 	for i, line := range lines {
 		if i < maxLines {
-			fmt.Printf("  %s\n", line)
+			w("  " + line)
 		} else {
-			fmt.Printf("  ... (%d more lines)\n", len(lines)-i)
+			w(fmt.Sprintf("  ... (%d more lines)", len(lines)-i))
 			break
 		}
 	}
-	fmt.Println()
+	w("")
 	return nil
 }
 
-func editMemory(path string) error {
+func editMemory(ctx *types.CommandContext, path string) error {
+	w := ctx.WriteOutput
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		template := `# Project Memory
 
@@ -89,19 +91,20 @@ func editMemory(path string) error {
 		if err := os.WriteFile(path, []byte(template), 0644); err != nil {
 			return fmt.Errorf("failed to create MEMORY.md: %w", err)
 		}
-		fmt.Printf("  Created new MEMORY.md at %s\n", path)
-		fmt.Println("  Edit the file to add project-specific memory and context.")
+		w("  Created new MEMORY.md at " + path)
+		w("  Edit the file to add project-specific memory and context.")
 		return nil
 	}
 
-	fmt.Printf("  MEMORY.md already exists at %s\n", path)
-	fmt.Println("  Edit the file directly to update memory.")
+	w("  MEMORY.md already exists at " + path)
+	w("  Edit the file directly to update memory.")
 	return nil
 }
 
-func clearMemory(path string) error {
+func clearMemory(ctx *types.CommandContext, path string) error {
+	w := ctx.WriteOutput
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		fmt.Println("  No MEMORY.md found. Nothing to clear.")
+		w("  No MEMORY.md found. Nothing to clear.")
 		return nil
 	}
 
@@ -109,6 +112,6 @@ func clearMemory(path string) error {
 		return fmt.Errorf("failed to clear memory: %w", err)
 	}
 
-	fmt.Println("  MEMORY.md has been deleted.")
+	w("  MEMORY.md has been deleted.")
 	return nil
 }

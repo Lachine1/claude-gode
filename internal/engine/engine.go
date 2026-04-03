@@ -40,6 +40,7 @@ type EngineConfig struct {
 	AppendPrompt string
 	Debug        bool
 	Verbose      bool
+	APIKey       string
 }
 
 // NewQueryEngine creates a new QueryEngine with the given configuration.
@@ -130,6 +131,7 @@ func (e *QueryEngine) runLoop(ctx context.Context, onEvent func(Event)) error {
 			Model:      e.config.Model,
 			MaxTokens:  e.config.MaxTokens,
 			MaxRetries: 3,
+			APIKey:     e.config.APIKey,
 		}
 		if apiCfg.Model == "" {
 			apiCfg.Model = "claude-sonnet-4-20250514"

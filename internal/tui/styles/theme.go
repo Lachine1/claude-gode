@@ -33,7 +33,9 @@ const (
 type Theme struct {
 	Base               lipgloss.Style
 	UserMessage        lipgloss.Style
+	UserMessagePrefix  lipgloss.Style
 	AssistantMessage   lipgloss.Style
+	CommandOutput      lipgloss.Style
 	ToolCall           lipgloss.Style
 	ToolCallRunning    lipgloss.Style
 	ToolCallSuccess    lipgloss.Style
@@ -75,16 +77,22 @@ func DefaultTheme() Theme {
 	t.UserMessage = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ColorPrimary)).
 		Background(lipgloss.Color(ColorUserBg)).
-		Padding(1, 2).
-		MarginBottom(1).
-		BorderStyle(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color(ColorPrimary))
+		Padding(0, 1).
+		MarginBottom(0)
+
+	t.UserMessagePrefix = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ColorPrimary)).
+		Bold(true)
 
 	t.AssistantMessage = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ColorText)).
-		Background(lipgloss.Color(ColorAssistantBg)).
-		Padding(1, 2).
-		MarginBottom(1)
+		Padding(0, 1).
+		MarginBottom(0)
+
+	t.CommandOutput = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ColorTextMuted)).
+		Padding(0, 1).
+		MarginBottom(0)
 
 	t.ToolCall = lipgloss.NewStyle().
 		Background(lipgloss.Color(ColorToolBg)).

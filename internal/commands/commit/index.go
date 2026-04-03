@@ -42,9 +42,9 @@ func handleCommit(ctx *types.CommandContext, args []string, isGit bool, gitRoot 
 	}
 
 	if len(strings.TrimSpace(string(statusOutput))) == 0 {
-		fmt.Println()
-		fmt.Println("  Nothing to commit. Working tree is clean.")
-		fmt.Println()
+		ctx.WriteOutput("")
+		ctx.WriteOutput("  Nothing to commit. Working tree is clean.")
+		ctx.WriteOutput("")
 		return nil
 	}
 
@@ -75,9 +75,11 @@ func handleCommit(ctx *types.CommandContext, args []string, isGit bool, gitRoot 
 		return fmt.Errorf("commit failed: %s\n%s", err, string(commitOutput))
 	}
 
-	fmt.Printf("\n  Committed: %s\n", message)
-	fmt.Printf("  %s\n", strings.TrimSpace(string(commitOutput)))
-	fmt.Println()
+	w := ctx.WriteOutput
+	w("")
+	w("  Committed: " + message)
+	w("  " + strings.TrimSpace(string(commitOutput)))
+	w("")
 
 	return nil
 }

@@ -27,24 +27,25 @@ func handleAgents(ctx *types.CommandContext, args []string) error {
 
 	switch action {
 	case "list", "status":
-		return listAgents()
+		return listAgents(ctx)
 	default:
 		return fmt.Errorf("unknown agents action: %s (use list or status)", action)
 	}
 }
 
-func listAgents() error {
-	fmt.Println()
-	fmt.Println("  Agents")
-	fmt.Println("  ═══════════════════════════════════════")
-	fmt.Println()
-	fmt.Println("  Main Agent (active)")
-	fmt.Println("    Status:    running")
-	fmt.Println("    Model:     claude-sonnet-4-20250514")
-	fmt.Println("    Context:   primary conversation")
-	fmt.Println()
-	fmt.Println("  Sub-agents can be spawned for parallel tasks.")
-	fmt.Println("  Use the Task tool to delegate work to sub-agents.")
-	fmt.Println()
+func listAgents(ctx *types.CommandContext) error {
+	w := ctx.WriteOutput
+	w("")
+	w("  Agents")
+	w("  ═══════════════════════════════════════")
+	w("")
+	w("  Main Agent (active)")
+	w("    Status:    running")
+	w("    Model:     claude-sonnet-4-20250514")
+	w("    Context:   primary conversation")
+	w("")
+	w("  Sub-agents can be spawned for parallel tasks.")
+	w("  Use the Task tool to delegate work to sub-agents.")
+	w("")
 	return nil
 }
