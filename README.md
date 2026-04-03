@@ -150,5 +150,5 @@ This is a ground-up Go recreation, not a direct translation. The following may d
 
 ## Disclaimer
 
-- The original source code copyright belongs to [Anthropic](https://www.anthropics.com).
+- The original source code copyright belongs to [Anthropic](https://www.anthropic.com).
 - This is for technical research and learning purposes only. Please do not use it for commercial purposes.
