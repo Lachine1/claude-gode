@@ -118,10 +118,13 @@ func LoadSettings(cwd string) (*Settings, error) {
 		}
 	}
 
-	// 5. Environment variables override settings
+	// 5. Apply env from settings to OS environment (so applyEnvVars can read them)
+	ApplyEnv(s.Env)
+
+	// 6. Environment variables override settings
 	applyEnvVars(s)
 
-	// 6. Global config (~/.claude.json)
+	// 7. Global config (~/.claude.json)
 	if gc, err := LoadGlobalConfig(); err == nil {
 		if gc.Theme != "" && s.Theme == "" {
 			s.Theme = gc.Theme

@@ -193,7 +193,7 @@ func (p *PromptInput) RenderSuggestions(width int) string {
 	}
 
 	var lines []string
-	maxLines := 3
+	maxLines := 6
 	if len(p.Suggestions) < maxLines {
 		maxLines = len(p.Suggestions)
 	}
