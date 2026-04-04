@@ -4,11 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"sync"
 
 	"github.com/Lachine1/claude-gode/pkg/types"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // MCPResource represents a resource provided by an MCP server
@@ -19,34 +19,18 @@ type MCPResource struct {
 	MimeType    string `json:"mime_type,omitempty"`
 }
 
-// ToolResult represents the result of an MCP tool call
-type ToolResult struct {
-	Content []ToolResultContent `json:"content"`
-	IsError bool                `json:"is_error,omitempty"`
-}
-
-// ToolResultContent represents content within a tool result
-type ToolResultContent struct {
-	Type     string `json:"type"`
-	Text     string `json:"text,omitempty"`
-	Data     string `json:"data,omitempty"`
-	MimeType string `json:"mime_type,omitempty"`
-}
-
-// MCPServer manages a connection to an MCP server
+// MCPServer manages a connection to an MCP server using the official Go SDK
 type MCPServer struct {
-	Name         string
-	Config       MCPConfig
-	Connected    bool
-	Tools        []types.Tool
-	Resources    []MCPResource
-	capabilities map[string]interface{}
+	Name      string
+	Config    MCPConfig
+	Connected bool
+	Tools     []types.Tool
+	Resources []MCPResource
 
-	mu     sync.Mutex
-	cmd    *exec.Cmd
-	stdin  io.WriteCloser
-	stdout io.ReadCloser
-	reqID  int
+	mu      sync.Mutex
+	client  *mcp.Client
+	session *mcp.ClientSession
+	cmd     *exec.Cmd
 }
 
 // MCPConfig holds configuration for starting an MCP server
@@ -65,7 +49,7 @@ func NewMCPServer(config MCPConfig) *MCPServer {
 	}
 }
 
-// Connect starts the MCP server process and initializes the connection
+// Connect starts the MCP server process and initializes the connection using the official SDK
 func (s *MCPServer) Connect(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -82,37 +66,33 @@ func (s *MCPServer) Connect(ctx context.Context) error {
 	}
 	cmd.Env = env
 
-	var err error
-	s.stdin, err = cmd.StdinPipe()
+	transport := &mcp.CommandTransport{Command: cmd}
+
+	s.client = mcp.NewClient(&mcp.Implementation{
+		Name:    "claude-gode",
+		Version: "999.0.0-restored",
+	}, nil)
+
+	session, err := s.client.Connect(ctx, transport, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create stdin pipe: %w", err)
+		return fmt.Errorf("failed to connect to MCP server: %w", err)
 	}
-
-	s.stdout, err = cmd.StdoutPipe()
-	if err != nil {
-		return fmt.Errorf("failed to create stdout pipe: %w", err)
-	}
-
-	cmd.Stderr = nil
-
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to start MCP server: %w", err)
-	}
-
+	s.session = session
 	s.cmd = cmd
 
-	if err := s.initialize(ctx); err != nil {
-		cmd.Process.Kill()
-		return fmt.Errorf("failed to initialize MCP server: %w", err)
+	// Get server info
+	if err := session.Ping(ctx, nil); err != nil {
+		// ping is optional, just log it
+		_ = err
 	}
 
 	if err := s.loadTools(ctx); err != nil {
-		cmd.Process.Kill()
+		session.Close()
 		return fmt.Errorf("failed to load tools: %w", err)
 	}
 
 	if err := s.loadResources(ctx); err != nil {
-		cmd.Process.Kill()
+		session.Close()
 		return fmt.Errorf("failed to load resources: %w", err)
 	}
 
@@ -120,7 +100,7 @@ func (s *MCPServer) Connect(ctx context.Context) error {
 	return nil
 }
 
-// Disconnect stops the MCP server process
+// Disconnect closes the MCP session
 func (s *MCPServer) Disconnect() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -129,13 +109,8 @@ func (s *MCPServer) Disconnect() error {
 		return nil
 	}
 
-	if s.stdin != nil {
-		s.stdin.Close()
-	}
-
-	if s.cmd != nil && s.cmd.Process != nil {
-		s.cmd.Process.Kill()
-		s.cmd.Wait()
+	if s.session != nil {
+		s.session.Close()
 	}
 
 	s.Connected = false
@@ -144,31 +119,22 @@ func (s *MCPServer) Disconnect() error {
 	return nil
 }
 
-// CallTool calls a tool on the MCP server
-func (s *MCPServer) CallTool(ctx context.Context, name string, input map[string]interface{}) (*ToolResult, error) {
+// CallTool calls a tool on the MCP server using the official SDK
+func (s *MCPServer) CallTool(ctx context.Context, name string, input map[string]interface{}) (*mcp.CallToolResult, error) {
 	s.mu.Lock()
-	if !s.Connected {
+	if !s.Connected || s.session == nil {
 		s.mu.Unlock()
 		return nil, fmt.Errorf("server not connected")
 	}
+	session := s.session
 	s.mu.Unlock()
 
-	params := map[string]interface{}{
-		"name":      name,
-		"arguments": input,
+	params := &mcp.CallToolParams{
+		Name:      name,
+		Arguments: input,
 	}
 
-	result, err := s.sendRequest(ctx, "tools/call", params)
-	if err != nil {
-		return nil, fmt.Errorf("tool call failed: %w", err)
-	}
-
-	var toolResult ToolResult
-	if err := json.Unmarshal(result, &toolResult); err != nil {
-		return nil, fmt.Errorf("failed to parse tool result: %w", err)
-	}
-
-	return &toolResult, nil
+	return session.CallTool(ctx, params)
 }
 
 // ListTools returns the tools available from this MCP server
@@ -181,64 +147,20 @@ func (s *MCPServer) ListResources() []MCPResource {
 	return s.Resources
 }
 
-// initialize sends the initialize request to the MCP server
-func (s *MCPServer) initialize(ctx context.Context) error {
-	params := map[string]interface{}{
-		"protocolVersion": "2024-11-05",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo": map[string]interface{}{
-			"name":    "claude-gode",
-			"version": "0.1.0",
-		},
-	}
-
-	result, err := s.sendRequest(ctx, "initialize", params)
-	if err != nil {
-		return err
-	}
-
-	var initResult struct {
-		ProtocolVersion string                 `json:"protocolVersion"`
-		Capabilities    map[string]interface{} `json:"capabilities"`
-		ServerInfo      map[string]interface{} `json:"serverInfo"`
-	}
-	if err := json.Unmarshal(result, &initResult); err != nil {
-		return fmt.Errorf("failed to parse initialize response: %w", err)
-	}
-
-	s.capabilities = initResult.Capabilities
-	if name, ok := initResult.ServerInfo["name"].(string); ok {
-		s.Name = name
-	}
-
-	_ = s.sendNotification("notifications/initialized", map[string]interface{}{})
-	return nil
-}
-
-// loadTools fetches the list of tools from the MCP server
+// loadTools fetches the list of tools from the MCP server using the official SDK
 func (s *MCPServer) loadTools(ctx context.Context) error {
-	result, err := s.sendRequest(ctx, "tools/list", map[string]interface{}{})
+	tools, err := s.session.ListTools(ctx, nil)
 	if err != nil {
 		return err
 	}
 
-	var toolsResp struct {
-		Tools []struct {
-			Name        string                 `json:"name"`
-			Description string                 `json:"description"`
-			InputSchema map[string]interface{} `json:"inputSchema"`
-		} `json:"tools"`
-	}
-	if err := json.Unmarshal(result, &toolsResp); err != nil {
-		return fmt.Errorf("failed to parse tools response: %w", err)
-	}
-
-	s.Tools = make([]types.Tool, 0, len(toolsResp.Tools))
-	for _, t := range toolsResp.Tools {
+	s.Tools = make([]types.Tool, 0, len(tools.Tools))
+	for _, t := range tools.Tools {
+		schema := t.InputSchema
 		s.Tools = append(s.Tools, &mcpTool{
 			name:        t.Name,
 			description: t.Description,
-			inputSchema: t.InputSchema,
+			inputSchema: schema,
 			server:      s,
 		})
 	}
@@ -246,95 +168,31 @@ func (s *MCPServer) loadTools(ctx context.Context) error {
 	return nil
 }
 
-// loadResources fetches the list of resources from the MCP server
+// loadResources fetches the list of resources from the MCP server using the official SDK
 func (s *MCPServer) loadResources(ctx context.Context) error {
-	result, err := s.sendRequest(ctx, "resources/list", map[string]interface{}{})
+	resources, err := s.session.ListResources(ctx, nil)
 	if err != nil {
-		return nil
+		return nil // resources are optional
 	}
 
-	var resourcesResp struct {
-		Resources []MCPResource `json:"resources"`
-	}
-	if err := json.Unmarshal(result, &resourcesResp); err != nil {
-		return nil
+	s.Resources = make([]MCPResource, 0, len(resources.Resources))
+	for _, r := range resources.Resources {
+		s.Resources = append(s.Resources, MCPResource{
+			URI:         r.URI,
+			Name:        r.Name,
+			Description: r.Description,
+			MimeType:    r.MIMEType,
+		})
 	}
 
-	s.Resources = resourcesResp.Resources
 	return nil
-}
-
-// sendRequest sends a JSON-RPC request and returns the result
-func (s *MCPServer) sendRequest(ctx context.Context, method string, params interface{}) (json.RawMessage, error) {
-	s.mu.Lock()
-	s.reqID++
-	reqID := s.reqID
-	s.mu.Unlock()
-
-	req := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      reqID,
-		"method":  method,
-		"params":  params,
-	}
-
-	data, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal request: %w", err)
-	}
-
-	data = append(data, '\n')
-	if _, err := s.stdin.Write(data); err != nil {
-		return nil, fmt.Errorf("failed to write request: %w", err)
-	}
-
-	decoder := json.NewDecoder(s.stdout)
-	for {
-		var resp map[string]interface{}
-		if err := decoder.Decode(&resp); err != nil {
-			return nil, fmt.Errorf("failed to read response: %w", err)
-		}
-
-		id, ok := resp["id"]
-		if !ok {
-			continue
-		}
-
-		if float64(reqID) == id {
-			if errVal, ok := resp["error"]; ok {
-				errData, _ := json.Marshal(errVal)
-				return nil, fmt.Errorf("JSON-RPC error: %s", string(errData))
-			}
-
-			resultData, _ := json.Marshal(resp["result"])
-			return resultData, nil
-		}
-	}
-}
-
-// sendNotification sends a JSON-RPC notification (no response expected)
-func (s *MCPServer) sendNotification(method string, params interface{}) error {
-	notif := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"method":  method,
-		"params":  params,
-	}
-
-	data, err := json.Marshal(notif)
-	if err != nil {
-		return fmt.Errorf("failed to marshal notification: %w", err)
-	}
-
-	data = append(data, '\n')
-	_, err = s.stdin.Write(data)
-	return err
 }
 
 // mcpTool wraps an MCP tool to implement types.Tool
 type mcpTool struct {
 	name        string
 	description string
-	inputSchema map[string]interface{}
+	inputSchema any
 	server      *MCPServer
 }
 
@@ -347,7 +205,10 @@ func (t *mcpTool) Description() string {
 }
 
 func (t *mcpTool) JSONSchema() map[string]interface{} {
-	return t.inputSchema
+	if m, ok := t.inputSchema.(map[string]interface{}); ok {
+		return m
+	}
+	return nil
 }
 
 func (t *mcpTool) Execute(ctx *types.ToolContext, input json.RawMessage, progress types.ToolCallProgress) (*types.ToolResult[json.RawMessage], error) {
@@ -376,8 +237,8 @@ func (t *mcpTool) Execute(ctx *types.ToolContext, input json.RawMessage, progres
 
 	var contentText string
 	for _, c := range result.Content {
-		if c.Type == "text" {
-			contentText += c.Text
+		if tc, ok := c.(*mcp.TextContent); ok {
+			contentText += tc.Text
 		}
 	}
 
