@@ -8,6 +8,8 @@ A faithful Go recreation of the Claude Code CLI — reconstructed from the TypeS
 
 > [!WARNING]
 > This repository is an **unofficial** Go recreation, built by studying the reconstructed TypeScript source of the public npm release. It is **for research and learning purposes only** and does not represent the internal development repository of Anthropic.
+>
+> This project was fully vibe-coded using [opencode](https://opencode.ai) and [Qwen 3.6 Plus](https://openrouter.ai/qwen/qwen3.6-plus:free).
 
 ---
 
@@ -152,7 +154,3 @@ This is a ground-up Go recreation, not a direct translation. The following may d
 
 - The original source code copyright belongs to [Anthropic](https://www.anthropic.com).
 - This is for technical research and learning purposes only. Please do not use it for commercial purposes.
-
----
-
-> This project was fully vibe-coded using [opencode](https://opencode.ai) and [Qwen 3.6 Plus](https://qwen.ai).
