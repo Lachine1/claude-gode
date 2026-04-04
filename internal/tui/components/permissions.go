@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
@@ -36,14 +35,16 @@ func NewPermissionDialog(theme styles.Theme, toolName, action string, callback f
 
 func (p *PermissionDialog) options() []string {
 	return []string{
-		"Allow once",
-		"Allow always",
-		"Deny",
+		"Yes",
+		"Yes, and don't ask again",
+		"Yes, and allow for session",
+		"No",
 	}
 }
 
 func (p *PermissionDialog) Select(idx int) {
-	if idx >= 0 && idx < len(p.options()) {
+	opts := p.options()
+	if idx >= 0 && idx < len(opts) {
 		p.Selected = idx
 	}
 }
@@ -71,6 +72,8 @@ func (p *PermissionDialog) Confirm() {
 	case 1:
 		p.Callback(PermissionAllowAlways)
 	case 2:
+		p.Callback(PermissionAllowAlways)
+	case 3:
 		p.Callback(PermissionDeny)
 	}
 }
@@ -89,6 +92,10 @@ func (p *PermissionDialog) HandleKey(key string) bool {
 		p.Selected = 2
 		p.Confirm()
 		return true
+	case "4":
+		p.Selected = 3
+		p.Confirm()
+		return true
 	case "up", "k":
 		p.MoveUp()
 	case "down", "j":
@@ -97,45 +104,61 @@ func (p *PermissionDialog) HandleKey(key string) bool {
 		p.Confirm()
 		return true
 	case "esc":
-		p.Selected = 2
+		p.Selected = 3
 		p.Confirm()
 		return true
 	}
 	return false
 }
 
+// Render matches PermissionPrompt.tsx:
+// ╭─ Permission Title ─────────────────────── (top border only)
+//
+//	Tool: <name>
+//	Action: <action>
+//
+//	❯ 1. Yes
+//	  2. Yes, and don't ask again
+//	  3. Yes, allow for session
+//	  4. No
+//
+//	Esc to cancel · Tab to amend
 func (p *PermissionDialog) Render(width int) string {
 	opts := p.options()
 
-	// Title in orange
-	title := p.Theme.PermissionTitle.Render("Permission Required")
+	title := p.Theme.PermissionTitle.Render("Tool Request: " + p.ToolName)
+	subtitle := p.Theme.PermissionSub.Render(p.Action)
 
-	// Tool info
-	toolInfo := fmt.Sprintf("Tool: %s", lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorPrimary)).
-		Render(p.ToolName))
-	actionInfo := fmt.Sprintf("Action: %s", lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorText)).
-		Render(p.Action))
+	// Calculate max index width for alignment
+	maxIdxWidth := len(fmt.Sprintf("%d", len(opts)))
 
-	// Options with [number] shortcuts
 	var optLines []string
 	for i, opt := range opts {
-		num := fmt.Sprintf("[%d]", i+1)
+		idxStr := fmt.Sprintf("%*d.", maxIdxWidth, i+1)
 		var line string
 		if i == p.Selected {
-			line = fmt.Sprintf("  %s %s", num, p.Theme.PermissionSelected.Render(opt))
+			// ❯ prefix for focused option
+			pointer := p.Theme.PermOptionFocus.Render("❯")
+			label := p.Theme.PermOptionFocus.Render(opt)
+			line = fmt.Sprintf("  %s %s %s", pointer, p.Theme.PermOptionIdx.Render(idxStr), label)
 		} else {
-			line = fmt.Sprintf("  %s %s", num, p.Theme.PermissionOption.Render(opt))
+			// Space prefix for non-focused
+			var arrow string
+			if i == 0 {
+				arrow = "↓"
+			} else if i == len(opts)-1 {
+				arrow = "↑"
+			} else {
+				arrow = " "
+			}
+			line = fmt.Sprintf("    %s %s %s", p.Theme.PermOptionBlur.Render(arrow), p.Theme.PermOptionIdx.Render(idxStr), opt)
 		}
 		optLines = append(optLines, line)
 	}
 
-	hint := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorTextMuted)).
-		Render("Press 1/2/3 or arrows to select, Enter to confirm")
+	cancel := p.Theme.PermCancel.Render("Esc to cancel · Tab to amend")
 
-	content := title + "\n\n" + toolInfo + "\n" + actionInfo + "\n\n" + strings.Join(optLines, "\n") + "\n\n" + hint
+	content := title + "\n" + subtitle + "\n\n" + strings.Join(optLines, "\n") + "\n\n" + cancel
 
-	return p.Theme.PermissionDialog.Render(content)
+	return p.Theme.PermissionBorder.Width(width).Render(content)
 }

@@ -4,72 +4,68 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// Claude Code exact colors (converted from RGB)
+// Claude Code exact color palette (dark theme)
+// Source: references/claude-code/src/utils/theme.ts
 const (
-	// Background colors
-	ColorBackground = "#0d0d0d"
-	ColorSurface    = "#1a1a1a"
-	ColorBorder     = "#333333"
-
-	// Text colors
-	ColorText      = "#e5e5e5"
-	ColorTextMuted = "#737373"
-
-	// Accent colors
-	ColorPrimary   = "#d4a373" // Orange/amber for assistant
-	ColorSecondary = "#4a9eff" // Blue for tool calls
-	ColorSuccess   = "#98c379"
-	ColorWarning   = "#d4a373"
-	ColorError     = "#e06c75"
-	ColorInfo      = "#56b6c2"
-
-	// Message colors
-	ColorUserBg      = "#262626" // Gray bg for user
-	ColorAssistantFg = "#d4a373" // Orange text for assistant
-	ColorToolBorder  = "#4a9eff" // Blue border for tool calls
-	ColorToolBg      = "#1a1a1a"
-
-	// Permission dialog
-	ColorPermBg     = "#1a1a1a"
-	ColorPermTitle  = "#d4a373"
-	ColorPermBorder = "#4a9eff"
-
-	// Status bar
-	ColorStatusBg = "#0d0d0d"
-	ColorStatusFg = "#737373"
-
-	// Input
-	ColorInputBorder = "#333333"
-	ColorInputBg     = "#0d0d0d"
+	ColorClaude          = "#D77757" // rgb(215,119,87)
+	ColorClaudeShimmer   = "#EB9F7F" // rgb(235,159,127)
+	ColorPermission      = "#B1B9F9" // rgb(177,185,249)
+	ColorPermissionShim  = "#CFD7FF" // rgb(207,215,255)
+	ColorSuccess         = "#4EBA65" // rgb(78,186,101)
+	ColorError           = "#FF6B80" // rgb(255,107,128)
+	ColorWarning         = "#FFC107" // rgb(255,193,7)
+	ColorText            = "#FFFFFF" // rgb(255,255,255)
+	ColorSubtle          = "#505050" // rgb(80,80,80)
+	ColorInactive        = "#999999" // rgb(153,153,153)
+	ColorSuggestion      = "#B1B9F9" // rgb(177,185,249)
+	ColorUserBg          = "#373737" // rgb(55,55,55)
+	ColorUserBgHover     = "#464646" // rgb(70,70,70)
+	ColorBashBorder      = "#FD5DB1" // rgb(253,93,177)
+	ColorPromptBorder    = "#888888" // rgb(136,136,136)
+	ColorBg              = "#0D0D0D" // rgb(13,13,13)
+	ColorMsgActionsBg    = "#2C323E" // rgb(44,50,62)
+	ColorDiffAdded       = "#4EBA65"
+	ColorDiffRemoved     = "#FF6B80"
+	ColorDiffAddedDim    = "#2A6B3A"
+	ColorDiffRemovedDim  = "#6B2A3A"
+	ColorThinkingShimmer = "#B1B9F9" // rgb(177,185,249)
 )
 
 type Theme struct {
-	Base               lipgloss.Style
-	UserMessage        lipgloss.Style
-	UserPrefix         lipgloss.Style
-	AssistantMessage   lipgloss.Style
-	AssistantPrefix    lipgloss.Style
-	CommandOutput      lipgloss.Style
-	ToolCall           lipgloss.Style
-	ToolCallRunning    lipgloss.Style
-	ToolCallSuccess    lipgloss.Style
-	ToolCallError      lipgloss.Style
-	ToolResult         lipgloss.Style
-	ThinkingBlock      lipgloss.Style
-	Error              lipgloss.Style
-	Success            lipgloss.Style
-	StatusBar          lipgloss.Style
-	StatusModel        lipgloss.Style
-	StatusTokens       lipgloss.Style
-	StatusMode         lipgloss.Style
-	InputBorder        lipgloss.Style
-	InputPrompt        lipgloss.Style
-	InputText          lipgloss.Style
-	PermissionDialog   lipgloss.Style
-	PermissionTitle    lipgloss.Style
-	PermissionOption   lipgloss.Style
-	PermissionSelected lipgloss.Style
-	Spinner            lipgloss.Style
+	Base             lipgloss.Style
+	UserMessage      lipgloss.Style
+	AssistantMessage lipgloss.Style
+	ToolCall         lipgloss.Style
+	ToolCallRunning  lipgloss.Style
+	ToolCallSuccess  lipgloss.Style
+	ToolCallError    lipgloss.Style
+	ToolResult       lipgloss.Style
+	ThinkingBlock    lipgloss.Style
+	Error            lipgloss.Style
+	Success          lipgloss.Style
+	Subtle           lipgloss.Style
+	Inactive         lipgloss.Style
+	Suggestion       lipgloss.Style
+	CommandOutput    lipgloss.Style
+	PromptBorder     lipgloss.Style
+	PromptPrefix     lipgloss.Style
+	PromptFooter     lipgloss.Style
+	SpinnerGlyph     lipgloss.Style
+	SpinnerText      lipgloss.Style
+	SpinnerStatus    lipgloss.Style
+	SpinnerTimer     lipgloss.Style
+	PermissionBorder lipgloss.Style
+	PermissionTitle  lipgloss.Style
+	PermissionSub    lipgloss.Style
+	PermOptionFocus  lipgloss.Style
+	PermOptionBlur   lipgloss.Style
+	PermOptionIdx    lipgloss.Style
+	PermOptionCheck  lipgloss.Style
+	PermCancel       lipgloss.Style
+	Scrollable       lipgloss.Style
+	NewMsgPill       lipgloss.Style
+	StickyHeader     lipgloss.Style
+	ModalTopBorder   lipgloss.Style
 }
 
 func DefaultTheme() Theme {
@@ -77,120 +73,120 @@ func DefaultTheme() Theme {
 
 	t.Base = lipgloss.NewStyle().
 		Foreground(lipgloss.Color(ColorText)).
-		Background(lipgloss.Color(ColorBackground))
+		Background(lipgloss.Color(ColorBg))
 
-	// User message: gray background
+	// User messages: gray background, no border, full width
+	// "You: <message>" text, compact
 	t.UserMessage = lipgloss.NewStyle().
 		Background(lipgloss.Color(ColorUserBg)).
-		Foreground(lipgloss.Color(ColorText)).
-		Padding(0, 1)
+		Padding(0, 2).
+		MarginTop(1).
+		MarginBottom(1)
 
-	t.UserPrefix = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorTextMuted)).
-		Bold(true)
-
-	// Assistant message: orange text
+	// Assistant messages: no background, plain white text
 	t.AssistantMessage = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorAssistantFg)).
-		Padding(0, 1)
+		Foreground(lipgloss.Color(ColorText)).
+		MarginTop(1).
+		MarginBottom(1)
 
-	t.AssistantPrefix = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorAssistantFg)).
-		Bold(true)
-
-	// Command output: muted
-	t.CommandOutput = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorTextMuted)).
-		Padding(0, 1)
-
-	// Tool call: blue border
+	// Tool calls: left border only (│), blue
 	t.ToolCall = lipgloss.NewStyle().
-		Background(lipgloss.Color(ColorToolBg)).
-		Foreground(lipgloss.Color(ColorText)).
-		Padding(0, 1).
 		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(ColorToolBorder))
+		BorderTop(false).
+		BorderLeft(true).
+		BorderRight(false).
+		BorderBottom(false).
+		BorderForeground(lipgloss.Color(ColorPermission)).
+		PaddingLeft(1).
+		MarginTop(1).
+		MarginBottom(1)
 
-	t.ToolCallRunning = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorSecondary))
+	t.ToolCallRunning = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorWarning))
+	t.ToolCallSuccess = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSuccess))
+	t.ToolCallError = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorError))
 
-	t.ToolCallSuccess = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorSuccess))
-
-	t.ToolCallError = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorError))
-
+	// Tool results: dimmed, collapsed preview
 	t.ToolResult = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorTextMuted)).
-		Background(lipgloss.Color(ColorToolBg)).
-		Padding(0, 1).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(ColorBorder))
+		Foreground(lipgloss.Color(ColorInactive)).
+		PaddingLeft(2).
+		MarginTop(1).
+		MarginBottom(1)
 
+	// Thinking blocks: subtle, dimmed, italic
 	t.ThinkingBlock = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorTextMuted)).
-		Background(lipgloss.Color(ColorSurface)).
-		Padding(0, 1).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(ColorBorder))
+		Foreground(lipgloss.Color(ColorSubtle)).
+		Italic(true).
+		PaddingLeft(2).
+		MarginTop(1).
+		MarginBottom(1)
 
-	t.Error = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorError))
+	t.Error = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorError)).Bold(true)
+	t.Success = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSuccess)).Bold(true)
+	t.Subtle = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
+	t.Inactive = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorInactive))
+	t.Suggestion = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSuggestion))
 
-	t.Success = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorSuccess))
+	// Command output: muted text
+	t.CommandOutput = lipgloss.NewStyle().
+		Foreground(lipgloss.Color(ColorInactive)).
+		MarginTop(1).
+		MarginBottom(1)
 
-	// Status bar: dark with muted text
-	t.StatusBar = lipgloss.NewStyle().
-		Background(lipgloss.Color(ColorStatusBg)).
-		Foreground(lipgloss.Color(ColorStatusFg)).
-		Padding(0, 1)
+	// Prompt input: bottom + right border only, round style
+	t.PromptBorder = lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderTop(false).
+		BorderLeft(false).
+		BorderRight(true).
+		BorderBottom(true).
+		BorderForeground(lipgloss.Color(ColorPromptBorder))
 
-	t.StatusModel = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorPrimary)).
-		Bold(true)
+	t.PromptPrefix = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorText))
+	t.PromptFooter = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
 
-	t.StatusTokens = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorInfo))
+	// Spinner
+	t.SpinnerGlyph = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorClaude))
+	t.SpinnerText = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorClaude))
+	t.SpinnerStatus = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
+	t.SpinnerTimer = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
 
-	t.StatusMode = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorSuccess))
-
-	// Input: simple with gray border
-	t.InputBorder = lipgloss.NewStyle().
-		Background(lipgloss.Color(ColorInputBg)).
-		Foreground(lipgloss.Color(ColorText)).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(ColorInputBorder)).
-		Padding(0, 1)
-
-	t.InputPrompt = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorTextMuted))
-
-	t.InputText = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorText))
-
-	// Permission dialog: blue border, orange title
-	t.PermissionDialog = lipgloss.NewStyle().
-		Background(lipgloss.Color(ColorPermBg)).
-		Foreground(lipgloss.Color(ColorText)).
-		Padding(1, 2).
-		BorderStyle(lipgloss.NormalBorder()).
-		BorderForeground(lipgloss.Color(ColorPermBorder))
+	// Permission dialog: TOP border only, round
+	t.PermissionBorder = lipgloss.NewStyle().
+		BorderStyle(lipgloss.RoundedBorder()).
+		BorderTop(true).
+		BorderLeft(false).
+		BorderRight(false).
+		BorderBottom(false).
+		BorderForeground(lipgloss.Color(ColorPermission))
 
 	t.PermissionTitle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorPermTitle)).
+		Foreground(lipgloss.Color(ColorPermission)).
 		Bold(true)
 
-	t.PermissionOption = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorText))
+	t.PermissionSub = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
 
-	t.PermissionSelected = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorPrimary)).
-		Bold(true)
+	// Permission options
+	t.PermOptionFocus = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSuggestion))
+	t.PermOptionBlur = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorText))
+	t.PermOptionIdx = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
+	t.PermOptionCheck = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSuccess))
+	t.PermCancel = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorSubtle))
 
-	t.Spinner = lipgloss.NewStyle().
-		Foreground(lipgloss.Color(ColorSecondary))
+	t.Scrollable = lipgloss.NewStyle().Background(lipgloss.Color(ColorBg))
+
+	// New messages pill
+	t.NewMsgPill = lipgloss.NewStyle().
+		Background(lipgloss.Color(ColorUserBg)).
+		Foreground(lipgloss.Color(ColorSubtle)).
+		Padding(0, 1)
+
+	// Sticky header (when scrolled up)
+	t.StickyHeader = lipgloss.NewStyle().
+		Background(lipgloss.Color(ColorUserBg)).
+		Foreground(lipgloss.Color(ColorSubtle))
+
+	// Modal top border
+	t.ModalTopBorder = lipgloss.NewStyle().Foreground(lipgloss.Color(ColorPermission))
 
 	return t
 }

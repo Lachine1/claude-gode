@@ -1,13 +1,11 @@
 package components
 
 import (
-	"fmt"
-	"strings"
-
-	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
+// StatusBar renders at the very bottom
+// Format: <model> | <perm_mode> | <git_branch>
 type StatusBar struct {
 	Model     string
 	InputTok  int
@@ -45,53 +43,23 @@ func (s *StatusBar) Render(width int) string {
 		return ""
 	}
 
-	// Model name (orange/bold)
-	modelStr := s.Theme.StatusModel.Render(fmt.Sprintf(" %s ", s.Model))
+	modelStr := s.Theme.PromptFooter.Render(s.Model)
+	permStr := s.Theme.PromptFooter.Render(s.PermMode)
 
-	// Token count (cyan)
-	var tokStr string
-	if s.InputTok > 0 || s.OutputTok > 0 {
-		tokStr = s.Theme.StatusTokens.Render(fmt.Sprintf(" %d in / %d out ", s.InputTok, s.OutputTok))
-	} else {
-		tokStr = ""
-	}
-
-	// Cost (warning color)
-	var costStr string
-	if s.Cost > 0 {
-		costStr = fmt.Sprintf(" $%.2f ", s.Cost)
-	}
-
-	// Permission mode (green)
-	permStr := s.Theme.StatusMode.Render(fmt.Sprintf(" %s ", s.PermMode))
-
-	// Git branch (muted)
-	var gitStr string
-	if s.GitBranch != "" {
-		gitStr = lipgloss.NewStyle().
-			Foreground(lipgloss.Color(styles.ColorTextMuted)).
-			Render(fmt.Sprintf(" %s ", s.GitBranch))
-	}
-
-	// Help hint
-	helpStr := lipgloss.NewStyle().
-		Foreground(lipgloss.Color(styles.ColorTextMuted)).
-		Render(" ? for help ")
-
-	parts := []string{modelStr}
-	if tokStr != "" {
-		parts = append(parts, tokStr)
-	}
-	if costStr != "" {
-		parts = append(parts, s.Theme.StatusTokens.Render(costStr))
-	}
+	var parts []string
+	parts = append(parts, modelStr)
 	parts = append(parts, permStr)
-	if gitStr != "" {
-		parts = append(parts, gitStr)
+	if s.GitBranch != "" {
+		parts = append(parts, s.Theme.PromptFooter.Render(s.GitBranch))
 	}
-	parts = append(parts, helpStr)
 
-	bar := strings.Join(parts, "│")
+	bar := ""
+	for i, p := range parts {
+		if i > 0 {
+			bar += " | "
+		}
+		bar += p
+	}
 
-	return s.Theme.StatusBar.Width(width).Render(bar)
+	return s.Theme.PromptFooter.Width(width).Render(bar)
 }
