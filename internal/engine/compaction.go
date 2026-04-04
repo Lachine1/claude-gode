@@ -147,6 +147,7 @@ Conversation:
 		Model:      e.config.Model,
 		MaxTokens:  4096,
 		MaxRetries: 2,
+		BaseURL:    e.config.BaseURL,
 	}
 	if apiCfg.Model == "" {
 		apiCfg.Model = "claude-sonnet-4-20250514"

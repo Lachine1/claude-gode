@@ -47,17 +47,48 @@ func Initialize() (*State, error) {
 
 	tools := registerTools()
 
+	// Get API key: env var takes priority, then settings.Env, then auth state
+	apiKey := authState.APIKey
+	if settings.APIKey() != "" {
+		apiKey = settings.APIKey()
+	}
+
+	// Get base URL from settings or env
+	baseURL := ""
+	if v := os.Getenv("ANTHROPIC_BASE_URL"); v != "" {
+		baseURL = v
+	} else if v := os.Getenv("BASE_URL"); v != "" {
+		baseURL = v
+	} else if settings.Raw != nil {
+		if v, ok := settings.Raw["anthropic_base_url"]; ok {
+			if s, ok := v.(string); ok {
+				baseURL = s
+			}
+		}
+	}
+
+	// Get model: env var takes priority, then settings.Model
+	model := settings.Model
+	if v := os.Getenv("CLAUDE_CODE_MODEL"); v != "" {
+		model = v
+	} else if v := os.Getenv("ANTHROPIC_MODEL"); v != "" {
+		model = v
+	} else if v := os.Getenv("MODEL"); v != "" {
+		model = v
+	}
+
 	queryEngine := engine.NewQueryEngine(engine.EngineConfig{
 		Cwd:          cwd,
 		Tools:        tools,
-		Model:        settings.Model,
+		Model:        model,
 		MaxTokens:    settings.MaxTokens(),
 		MaxBudgetUSD: 0,
 		CustomPrompt: "",
 		AppendPrompt: "",
 		Debug:        false,
 		Verbose:      false,
-		APIKey:       authState.APIKey,
+		APIKey:       apiKey,
+		BaseURL:      baseURL,
 	})
 
 	allCommands := commands.RegisterAll(queryEngine, cfg, tools, isGit, gitRoot)
