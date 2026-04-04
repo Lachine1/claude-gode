@@ -200,6 +200,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prompt.PrevSuggestion()
 				return m, nil
 			}
+		case " ":
+			m.prompt.Insert(' ')
+			m.refreshCompletions()
+			return m, nil
 		default:
 			if len(msg.String()) == 1 {
 				m.prompt.Insert(rune(msg.String()[0]))
