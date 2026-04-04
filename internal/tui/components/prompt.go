@@ -3,6 +3,7 @@ package components
 import (
 	"strings"
 
+	"github.com/Lachine1/claude-gode/internal/completion"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
@@ -19,6 +20,12 @@ type PromptInput struct {
 	Model     string
 	PermMode  string
 	IsLoading bool
+
+	// Completion
+	Suggestions        []completion.SuggestionItem
+	SelectedSuggestion int
+	GhostText          *completion.GhostText
+	ShowSuggestions    bool
 }
 
 func NewPromptInput(theme styles.Theme) *PromptInput {
@@ -29,7 +36,6 @@ func NewPromptInput(theme styles.Theme) *PromptInput {
 	}
 }
 
-// Insert adds a character at the cursor position
 func (p *PromptInput) Insert(r rune) {
 	buf := []rune(p.Buffer)
 	if p.Cursor < 0 || p.Cursor > len(buf) {
@@ -40,7 +46,6 @@ func (p *PromptInput) Insert(r rune) {
 	p.Cursor++
 }
 
-// Backspace deletes character before cursor
 func (p *PromptInput) Backspace() {
 	if p.Cursor <= 0 {
 		return
@@ -54,7 +59,6 @@ func (p *PromptInput) Backspace() {
 	p.Cursor--
 }
 
-// Delete deletes character at cursor
 func (p *PromptInput) Delete() {
 	buf := []rune(p.Buffer)
 	if p.Cursor >= len(buf) {
@@ -85,7 +89,6 @@ func (p *PromptInput) MoveEnd() {
 	p.Cursor = len([]rune(p.Buffer))
 }
 
-// Submit returns the input text and clears the buffer
 func (p *PromptInput) Submit() string {
 	text := strings.TrimSpace(p.Buffer)
 	if text == "" {
@@ -128,17 +131,117 @@ func (p *PromptInput) HistoryDown() {
 	}
 }
 
-// Render renders the full prompt input area with footer
-// Format:
-// ❯ <input text with cursor>
-// ╰────────────────────────────────────── (bottom border)
-// <model> | <perm_mode> | Ctrl+O for help
+func (p *PromptInput) UpdateSuggestions(items []completion.SuggestionItem) {
+	p.Suggestions = items
+	p.SelectedSuggestion = 0
+	p.ShowSuggestions = len(items) > 0
+}
+
+func (p *PromptInput) AcceptSuggestion() {
+	if !p.ShowSuggestions || len(p.Suggestions) == 0 {
+		return
+	}
+	s := p.Suggestions[p.SelectedSuggestion]
+	if strings.HasPrefix(p.Buffer, "/") {
+		query := strings.TrimPrefix(p.Buffer, "/")
+		if spaceIdx := strings.Index(query, " "); spaceIdx != -1 {
+			p.Buffer = "/" + s.ID + query[spaceIdx:]
+		} else {
+			p.Buffer = "/" + s.ID
+		}
+	} else if idx := strings.LastIndex(p.Buffer, "@"); idx != -1 {
+		p.Buffer = p.Buffer[:idx] + s.ID
+	} else {
+		p.Buffer = s.DisplayText
+	}
+	p.Cursor = len([]rune(p.Buffer))
+	p.DismissSuggestions()
+}
+
+func (p *PromptInput) AcceptGhostText() {
+	if p.GhostText == nil {
+		return
+	}
+	p.Buffer = p.GhostText.FullCommand
+	p.Cursor = len([]rune(p.Buffer))
+	p.GhostText = nil
+}
+
+func (p *PromptInput) NextSuggestion() {
+	if !p.ShowSuggestions || len(p.Suggestions) == 0 {
+		return
+	}
+	p.SelectedSuggestion = (p.SelectedSuggestion + 1) % len(p.Suggestions)
+}
+
+func (p *PromptInput) PrevSuggestion() {
+	if !p.ShowSuggestions || len(p.Suggestions) == 0 {
+		return
+	}
+	p.SelectedSuggestion = (p.SelectedSuggestion - 1 + len(p.Suggestions)) % len(p.Suggestions)
+}
+
+func (p *PromptInput) DismissSuggestions() {
+	p.Suggestions = nil
+	p.SelectedSuggestion = 0
+	p.ShowSuggestions = false
+}
+
+func (p *PromptInput) RenderSuggestions(width int) string {
+	if !p.ShowSuggestions || len(p.Suggestions) == 0 || width <= 0 {
+		return ""
+	}
+
+	var lines []string
+	maxLines := 3
+	if len(p.Suggestions) < maxLines {
+		maxLines = len(p.Suggestions)
+	}
+
+	for i := 0; i < maxLines; i++ {
+		s := p.Suggestions[i]
+		var prefix string
+		if i == p.SelectedSuggestion {
+			prefix = "❯ "
+		} else if i == p.SelectedSuggestion-1 {
+			prefix = "↑ "
+		} else if i == p.SelectedSuggestion+1 {
+			prefix = "↓ "
+		} else {
+			prefix = "  "
+		}
+
+		display := s.DisplayText
+		if s.Description != "" {
+			display += " - " + s.Description
+		}
+		tag := "[" + s.Tag + "]"
+
+		line := prefix + display
+		if len(line) > width-len(tag)-2 {
+			line = line[:width-len(tag)-2]
+		}
+		padding := width - len(line) - len(tag)
+		if padding > 0 {
+			line += strings.Repeat(" ", padding)
+		}
+		line += tag
+
+		if i == p.SelectedSuggestion {
+			lines = append(lines, p.Theme.Suggestion.Render(line))
+		} else {
+			lines = append(lines, p.Theme.Subtle.Render(line))
+		}
+	}
+
+	return strings.Join(lines, "\n")
+}
+
 func (p *PromptInput) Render(width int) string {
 	if width <= 0 {
 		return ""
 	}
 
-	// Mode indicator prefix: ❯ for prompt, ! for bash, # for memory
 	var prefix string
 	switch p.Mode {
 	case "bash":
@@ -149,7 +252,6 @@ func (p *PromptInput) Render(width int) string {
 		prefix = "❯ "
 	}
 
-	// Build input line with cursor
 	buf := []rune(p.Buffer)
 	cursorPos := p.Cursor
 	if cursorPos > len(buf) {
@@ -161,22 +263,30 @@ func (p *PromptInput) Render(width int) string {
 	right := string(buf[cursorPos:])
 
 	if p.Focused {
-		// Cursor shown as inverted space or block
-		inputLine = prefix + left + "█" + right
+		if p.GhostText != nil && p.GhostText.InsertPosition == len(buf) {
+			inputLine = prefix + left + "█" + p.Theme.Subtle.Render(p.GhostText.Text)
+		} else {
+			inputLine = prefix + left + "█" + right
+		}
 	} else {
 		inputLine = prefix + p.Buffer
 	}
 
-	// Truncate to width
 	if len(inputLine) > width-2 {
 		inputLine = inputLine[:width-2]
 	}
 
-	// Bottom border: ╰─────────────────╯
 	border := p.Theme.PromptBorder.Width(width).Render(" ")
+	footer := p.Theme.PromptFooter.Render(p.Model + " | " + p.PermMode + " | Tab to complete · Ctrl+O for help")
 
-	// Footer: model | perm_mode | Ctrl+O for help
-	footer := p.Theme.PromptFooter.Render(p.Model + " | " + p.PermMode + " | Ctrl+O for help")
+	result := inputLine + "\n" + border + "\n" + footer
 
-	return inputLine + "\n" + border + "\n" + footer
+	if p.ShowSuggestions && len(p.Suggestions) > 0 {
+		suggestions := p.RenderSuggestions(width)
+		if suggestions != "" {
+			result = suggestions + "\n" + result
+		}
+	}
+
+	return result
 }

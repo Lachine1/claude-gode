@@ -1,7 +1,6 @@
 # Claude Code in Go
 
 [![Go](https://img.shields.io/badge/Go-%E2%89%A51.24.0-00ADD8?logo=go&logoColor=white)](https://go.dev)
-[![BubbleTea](https://img.shields.io/badge/TUI-BubbleTea_v2-FF6B6B)](https://charm.sh)
 [![License](https://img.shields.io/github/license/Lachine1/claude-gode)](LICENSE)
 
 A faithful Go recreation of the Claude Code CLI — reconstructed from the TypeScript source maps of the public npm release.

@@ -9,6 +9,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/Lachine1/claude-gode/internal/bootstrap"
 	"github.com/Lachine1/claude-gode/internal/commands"
+	"github.com/Lachine1/claude-gode/internal/completion"
 	"github.com/Lachine1/claude-gode/internal/engine"
 	"github.com/Lachine1/claude-gode/internal/tui/components"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
@@ -24,21 +25,22 @@ func Run(ctx context.Context, state *bootstrap.State, args []string) error {
 }
 
 type appModel struct {
-	theme          styles.Theme
-	bootstrap      *bootstrap.State
-	messageList    *components.MessageList
-	prompt         *components.PromptInput
-	spinner        *components.Spinner
-	messages       []types.Message
-	usage          types.Usage
-	cost           float64
-	permissionMode string
-	gitBranch      string
-	width          int
-	height         int
-	streaming      bool
-	streamingText  strings.Builder
-	streamingTok   int
+	theme            styles.Theme
+	bootstrap        *bootstrap.State
+	messageList      *components.MessageList
+	prompt           *components.PromptInput
+	spinner          *components.Spinner
+	messages         []types.Message
+	usage            types.Usage
+	cost             float64
+	permissionMode   string
+	gitBranch        string
+	width            int
+	height           int
+	streaming        bool
+	streamingText    strings.Builder
+	streamingTok     int
+	completionEngine *completion.CompletionEngine
 }
 
 func newAppModel(state *bootstrap.State, args []string, theme styles.Theme) appModel {
@@ -49,21 +51,31 @@ func newAppModel(state *bootstrap.State, args []string, theme styles.Theme) appM
 
 	spinner := components.NewSpinner(theme)
 
+	var cmdInfos []completion.CommandInfo
+	for _, cmd := range state.Commands {
+		cmdInfos = append(cmdInfos, completion.CommandInfo{
+			Name:        cmd.Name,
+			Aliases:     cmd.Aliases,
+			Description: cmd.Description,
+		})
+	}
+
 	permMode := "default"
 	if state.Config.PermissionMode() != "" {
 		permMode = state.Config.PermissionMode()
 	}
 
 	m := appModel{
-		theme:          theme,
-		bootstrap:      state,
-		messageList:    &components.MessageList{Theme: theme, Height: 20},
-		prompt:         prompt,
-		spinner:        spinner,
-		messages:       make([]types.Message, 0),
-		permissionMode: permMode,
-		width:          80,
-		height:         24,
+		theme:            theme,
+		bootstrap:        state,
+		messageList:      &components.MessageList{Theme: theme, Height: 20},
+		prompt:           prompt,
+		spinner:          spinner,
+		messages:         make([]types.Message, 0),
+		permissionMode:   permMode,
+		width:            80,
+		height:           24,
+		completionEngine: completion.NewEngine(cmdInfos),
 	}
 
 	if len(args) > 0 {
@@ -120,13 +132,28 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.prompt.Buffer == "" {
 				return m, tea.Quit
 			}
+		case "tab":
+			if m.prompt.ShowSuggestions && len(m.prompt.Suggestions) > 0 {
+				m.prompt.AcceptSuggestion()
+			} else if m.prompt.GhostText != nil {
+				m.prompt.AcceptGhostText()
+			}
+			return m, nil
 		case "enter":
 			return m.processInput()
 		case "up":
-			m.prompt.HistoryUp()
+			if m.prompt.ShowSuggestions {
+				m.prompt.PrevSuggestion()
+			} else {
+				m.prompt.HistoryUp()
+			}
 			return m, nil
 		case "down":
-			m.prompt.HistoryDown()
+			if m.prompt.ShowSuggestions {
+				m.prompt.NextSuggestion()
+			} else {
+				m.prompt.HistoryDown()
+			}
 			return m, nil
 		case "pgup":
 			m.messageList.PageUp()
@@ -138,7 +165,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.prompt.MoveLeft()
 			return m, nil
 		case "right":
-			m.prompt.MoveRight()
+			if m.prompt.GhostText != nil {
+				m.prompt.AcceptGhostText()
+			} else {
+				m.prompt.MoveRight()
+			}
 			return m, nil
 		case "home":
 			m.prompt.MoveHome()
@@ -148,13 +179,31 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "backspace":
 			m.prompt.Backspace()
+			m.refreshCompletions()
 			return m, nil
 		case "delete":
 			m.prompt.Delete()
+			m.refreshCompletions()
 			return m, nil
+		case "esc":
+			if m.prompt.ShowSuggestions {
+				m.prompt.DismissSuggestions()
+				return m, nil
+			}
+		case "ctrl+n":
+			if m.prompt.ShowSuggestions {
+				m.prompt.NextSuggestion()
+				return m, nil
+			}
+		case "ctrl+p":
+			if m.prompt.ShowSuggestions {
+				m.prompt.PrevSuggestion()
+				return m, nil
+			}
 		default:
 			if len(msg.String()) == 1 {
 				m.prompt.Insert(rune(msg.String()[0]))
+				m.refreshCompletions()
 			}
 			return m, nil
 		}
@@ -163,11 +212,23 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *appModel) refreshCompletions() {
+	if m.completionEngine == nil {
+		return
+	}
+	suggestions := m.completionEngine.GetSuggestions(m.prompt.Buffer, m.bootstrap.Cwd)
+	m.prompt.UpdateSuggestions(suggestions)
+	m.prompt.GhostText = m.completionEngine.GetGhostText(m.prompt.Buffer, m.bootstrap.Cwd)
+}
+
 func (m appModel) processInput() (tea.Model, tea.Cmd) {
 	input := m.prompt.Submit()
 	if input == "" {
 		return m, nil
 	}
+
+	m.prompt.DismissSuggestions()
+	m.prompt.GhostText = nil
 
 	if strings.HasPrefix(input, "/") {
 		return m.handleCommand(input)
@@ -191,6 +252,8 @@ func (m appModel) handleCommand(input string) (tea.Model, tea.Cmd) {
 		m.messageList.ScrollToBottom()
 		return m, nil
 	}
+
+	m.completionEngine.RecordCommandUsage(cmdName)
 
 	var output strings.Builder
 	ctx := &types.CommandContext{
@@ -338,7 +401,6 @@ func (m appModel) View() tea.View {
 
 	var content strings.Builder
 
-	// Message area (takes remaining height)
 	msgHeight := m.height - 4
 	if msgHeight > 0 {
 		m.messageList.Height = msgHeight
@@ -346,14 +408,12 @@ func (m appModel) View() tea.View {
 		content.WriteString("\n")
 	}
 
-	// Spinner (when streaming)
 	if m.streaming {
 		m.spinner.TokenCount = m.streamingTok
 		content.WriteString(m.spinner.Render(m.width))
 		content.WriteString("\n")
 	}
 
-	// Prompt input with footer
 	content.WriteString(m.prompt.Render(m.width))
 
 	return tea.NewView(content.String())

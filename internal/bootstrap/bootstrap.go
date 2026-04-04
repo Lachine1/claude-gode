@@ -15,6 +15,7 @@ import (
 // State holds the initialized application state
 type State struct {
 	Config      *config.Config
+	Settings    *config.Settings
 	Auth        *auth.AuthState
 	Cwd         string
 	IsGit       bool
@@ -31,10 +32,11 @@ func Initialize() (*State, error) {
 		return nil, err
 	}
 
-	cfg, err := config.Load(cwd)
+	settings, err := config.LoadSettings(cwd)
 	if err != nil {
 		return nil, err
 	}
+	cfg := &config.Config{Settings: settings}
 
 	authState, err := auth.Initialize(cfg)
 	if err != nil {
@@ -48,8 +50,8 @@ func Initialize() (*State, error) {
 	queryEngine := engine.NewQueryEngine(engine.EngineConfig{
 		Cwd:          cwd,
 		Tools:        tools,
-		Model:        cfg.Model(),
-		MaxTokens:    cfg.MaxTokens(),
+		Model:        settings.Model,
+		MaxTokens:    settings.MaxTokens(),
 		MaxBudgetUSD: 0,
 		CustomPrompt: "",
 		AppendPrompt: "",
@@ -62,6 +64,7 @@ func Initialize() (*State, error) {
 
 	return &State{
 		Config:      cfg,
+		Settings:    settings,
 		Auth:        authState,
 		Cwd:         cwd,
 		IsGit:       isGit,
