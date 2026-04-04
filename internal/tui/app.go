@@ -125,6 +125,13 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		k := msg.Key()
+		switch k.Text {
+		case " ":
+			m.prompt.Insert(' ')
+			m.refreshCompletions()
+			return m, nil
+		}
 		switch msg.String() {
 		case "ctrl+c":
 			return m, tea.Quit
@@ -200,13 +207,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.prompt.PrevSuggestion()
 				return m, nil
 			}
-		case " ":
-			m.prompt.Insert(' ')
-			m.refreshCompletions()
-			return m, nil
 		default:
-			if len(msg.String()) == 1 {
-				m.prompt.Insert(rune(msg.String()[0]))
+			if k.Text != "" {
+				for _, r := range k.Text {
+					m.prompt.Insert(r)
+				}
 				m.refreshCompletions()
 			}
 			return m, nil
