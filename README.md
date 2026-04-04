@@ -152,3 +152,7 @@ This is a ground-up Go recreation, not a direct translation. The following may d
 
 - The original source code copyright belongs to [Anthropic](https://www.anthropic.com).
 - This is for technical research and learning purposes only. Please do not use it for commercial purposes.
+
+---
+
+> This project was fully vibe-coded using [opencode](https://opencode.ai) and [Qwen 3.6 Plus](https://qwen.ai).
