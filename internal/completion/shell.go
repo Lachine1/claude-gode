@@ -23,13 +23,18 @@ func GetShellHistoryCompletion(input string) *GhostText {
 	}
 
 	history := getShellHistory()
+	inputRunes := []rune(input)
 	for _, cmd := range history {
 		if strings.HasPrefix(cmd, input) && cmd != input {
-			suffix := cmd[len(input):]
+			cmdRunes := []rune(cmd)
+			if len(cmdRunes) <= len(inputRunes) {
+				continue
+			}
+			suffix := string(cmdRunes[len(inputRunes):])
 			return &GhostText{
 				Text:           suffix,
 				FullCommand:    cmd,
-				InsertPosition: len(input),
+				InsertPosition: len(inputRunes),
 			}
 		}
 	}

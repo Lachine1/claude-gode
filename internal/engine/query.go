@@ -64,13 +64,6 @@ func doQueryOnce(
 	onToolCall func(toolCall ToolCall),
 	onThinking func(text string),
 ) (*QueryResponse, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	go func() {
-		<-ctx.Done()
-	}()
-
 	body, err := doAPIRequest(cfg, messages, systemPrompt, tools)
 	if err != nil {
 		return nil, err

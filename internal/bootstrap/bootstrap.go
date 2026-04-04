@@ -67,14 +67,36 @@ func Initialize() (*State, error) {
 		}
 	}
 
-	// Get model: env var takes priority, then settings.Model
-	model := settings.Model
+	// Get model with correct priority order:
+	// 1. CLAUDE_CODE_MODEL env (highest)
+	// 2. ANTHROPIC_MODEL env
+	// 3. MODEL env
+	// 4. ANTHROPIC_DEFAULT_SONNET_MODEL env
+	// 5. settings.json "model" field
+	// 6. settings.json default_sonnet_model
+	// 7. hardcoded default
+	model := "claude-sonnet-4-20250514" // fallback
+
+	// Start with settings.json model
+	if settings.Model != "" {
+		model = settings.Model
+	}
+
+	// Override with env vars (highest priority first)
 	if v := os.Getenv("CLAUDE_CODE_MODEL"); v != "" {
 		model = v
 	} else if v := os.Getenv("ANTHROPIC_MODEL"); v != "" {
 		model = v
 	} else if v := os.Getenv("MODEL"); v != "" {
 		model = v
+	} else if v := os.Getenv("ANTHROPIC_DEFAULT_SONNET_MODEL"); v != "" {
+		model = v
+	} else if settings.Raw != nil {
+		if v, ok := settings.Raw["default_sonnet_model"]; ok {
+			if s, ok := v.(string); ok {
+				model = s
+			}
+		}
 	}
 
 	queryEngine := engine.NewQueryEngine(engine.EngineConfig{

@@ -103,6 +103,14 @@ func (t *Tracker) Close() {
 		return
 	}
 
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	select {
+	case <-t.done:
+		return
+	default:
+	}
+	close(t.done)
 	close(t.events)
 	t.wg.Wait()
 }

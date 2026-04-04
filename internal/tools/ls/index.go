@@ -136,7 +136,7 @@ func (t *LSTool) Execute(ctx *types.ToolContext, input json.RawMessage, progress
 		entryType := "file"
 		if entry.IsDir() {
 			entryType = "directory"
-		} else if info.Mode()&os.ModeSymlink != 0 {
+		} else if entry.Type()&os.ModeSymlink != 0 {
 			entryType = "symlink"
 		} else if info.Mode()&os.ModeSocket != 0 {
 			entryType = "socket"

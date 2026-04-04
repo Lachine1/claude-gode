@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -225,10 +227,9 @@ func openBrowser(url string) error {
 
 func generateState() string {
 	b := make([]byte, 32)
-	for i := range b {
-		b[i] = alphanumeric[i%len(alphanumeric)]
+	_, err := rand.Read(b)
+	if err != nil {
+		return "fallback-state"
 	}
-	return string(b)
+	return base64.URLEncoding.EncodeToString(b)
 }
-
-const alphanumeric = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"

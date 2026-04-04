@@ -5,6 +5,27 @@
 
 A faithful Go recreation of the Claude Code CLI — reconstructed from the TypeScript source maps of the public npm release.
 
+### 1:1 Recreation Progress
+
+```
+Overall Progress: ████████████████░░░░░░░░░░░░░░░░░░░░ 35%
+
+Core Engine:      ████████████████████░░░░░░░░░░░░░░░░ 40% API loop, streaming, compaction
+Tools (8/53):     ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 15% Bash, Read, Write, Edit, Glob, Grep, LS, WebFetch
+Commands (18/87): ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 21% /help, /compact, /memory, /settings, etc.
+TUI:              ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 20% Messages, input, spinner, suggestions, completion
+Services:         ████████████████░░░░░░░░░░░░░░░░░░░░ 40% API, auth, config, MCP, analytics
+Completion:       ████████████░░░░░░░░░░░░░░░░░░░░░░░░ 30% Tab completion, @files, ghost text, shell history
+Settings:         ██████████████████████████░░░░░░░░░░ 65% .env, settings.json, 25+ env vars
+Agent/Coordinator:░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% Multi-agent orchestration
+Memory System:    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% 5-tier memory architecture
+Key Bindings:     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% Full keybinding engine (15 files in original)
+Vim Mode:         ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% Motions, operators, text objects
+Voice:            ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% Streaming STT
+Bridge/Remote:    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% Remote session teleportation (37 files)
+Plugins/Skills:   ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  0% Plugin & skill system
+```
+
 > [!WARNING]
 > This repository is an **unofficial** Go recreation, built by studying the reconstructed TypeScript source of the public npm release. It is **for research and learning purposes only** and does not represent the internal development repository of Anthropic.
 >

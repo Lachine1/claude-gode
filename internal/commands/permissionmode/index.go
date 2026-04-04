@@ -85,11 +85,11 @@ func setPermissionMode(ctx *types.CommandContext, cfg *svcconfig.Config, mode st
 		return fmt.Errorf("invalid permission mode: %s\nValid modes: %v", mode, validModes)
 	}
 
-	cfg.Set("permission_mode", mode)
+	cfg.Set("permissionMode", mode)
 
 	settingsPath := filepath.Join(homeDir(), ".claude", "settings.json")
 	settings := loadSettings(settingsPath)
-	settings["permission_mode"] = mode
+	settings["permissionMode"] = mode
 
 	if err := saveSettings(settingsPath, settings); err != nil {
 		return fmt.Errorf("failed to save settings: %w", err)

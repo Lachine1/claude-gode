@@ -9,32 +9,32 @@ import (
 
 // Settings holds all application settings
 type Settings struct {
-	Model                      string                 `json:"model"`
-	AvailableModels            []string               `json:"availableModels"`
-	PermissionMode             string                 `json:"permissionMode"`
-	Permissions                Permissions            `json:"permissions"`
-	FileSuggestion             FileSuggestion         `json:"fileSuggestion"`
-	RespectGitignore           bool                   `json:"respectGitignore"`
-	Env                        map[string]string      `json:"env"`
-	EnableAllProjectMcpServers bool                   `json:"enableAllProjectMcpServers"`
-	EnabledMcpjsonServers      []string               `json:"enabledMcpjsonServers"`
-	DisabledMcpjsonServers     []string               `json:"disabledMcpjsonServers"`
-	Hooks                      map[string]Hook        `json:"hooks"`
-	DisableAllHooks            bool                   `json:"disableAllHooks"`
-	DefaultShell               string                 `json:"defaultShell"`
-	Theme                      string                 `json:"theme"`
-	OutputStyle                string                 `json:"outputStyle"`
-	Language                   string                 `json:"language"`
-	ShowWelcomeBanner          bool                   `json:"showWelcomeBanner"`
-	ShowThinkingSummaries      bool                   `json:"showThinkingSummaries"`
-	PromptSuggestionEnabled    bool                   `json:"promptSuggestionEnabled"`
-	FastMode                   bool                   `json:"fastMode"`
-	AlwaysThinkingEnabled      bool                   `json:"alwaysThinkingEnabled"`
-	EffortLevel                string                 `json:"effortLevel"`
-	AutoMemoryEnabled          bool                   `json:"autoMemoryEnabled"`
-	AutoMemoryDirectory        string                 `json:"autoMemoryDirectory"`
-	StatusLine                 StatusLine             `json:"statusLine"`
-	SpinnerTipsEnabled         bool                   `json:"spinnerTipsEnabled"`
+	Model                      string                 `json:"model,omitempty"`
+	AvailableModels            []string               `json:"availableModels,omitempty"`
+	PermissionMode             string                 `json:"permissionMode,omitempty"`
+	Permissions                Permissions            `json:"permissions,omitempty"`
+	FileSuggestion             FileSuggestion         `json:"fileSuggestion,omitempty"`
+	RespectGitignore           bool                   `json:"respectGitignore,omitempty"`
+	Env                        map[string]string      `json:"env,omitempty"`
+	EnableAllProjectMcpServers bool                   `json:"enableAllProjectMcpServers,omitempty"`
+	EnabledMcpjsonServers      []string               `json:"enabledMcpjsonServers,omitempty"`
+	DisabledMcpjsonServers     []string               `json:"disabledMcpjsonServers,omitempty"`
+	Hooks                      map[string]Hook        `json:"hooks,omitempty"`
+	DisableAllHooks            bool                   `json:"disableAllHooks,omitempty"`
+	DefaultShell               string                 `json:"defaultShell,omitempty"`
+	Theme                      string                 `json:"theme,omitempty"`
+	OutputStyle                string                 `json:"outputStyle,omitempty"`
+	Language                   string                 `json:"language,omitempty"`
+	ShowWelcomeBanner          bool                   `json:"showWelcomeBanner,omitempty"`
+	ShowThinkingSummaries      bool                   `json:"showThinkingSummaries,omitempty"`
+	PromptSuggestionEnabled    bool                   `json:"promptSuggestionEnabled,omitempty"`
+	FastMode                   bool                   `json:"fastMode,omitempty"`
+	AlwaysThinkingEnabled      bool                   `json:"alwaysThinkingEnabled,omitempty"`
+	EffortLevel                string                 `json:"effortLevel,omitempty"`
+	AutoMemoryEnabled          bool                   `json:"autoMemoryEnabled,omitempty"`
+	AutoMemoryDirectory        string                 `json:"autoMemoryDirectory,omitempty"`
+	StatusLine                 StatusLine             `json:"statusLine,omitempty"`
+	SpinnerTipsEnabled         bool                   `json:"spinnerTipsEnabled,omitempty"`
 	Raw                        map[string]interface{} `json:"-"`
 
 	userSettingsPath    string

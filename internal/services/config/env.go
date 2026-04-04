@@ -84,24 +84,27 @@ func applyEnvVars(s *Settings) {
 		s.Model = v
 	}
 
-	// Default model overrides
+	// Default model overrides (these ALWAYS override s.Model)
 	if v := os.Getenv("ANTHROPIC_DEFAULT_OPUS_MODEL"); v != "" {
 		if s.Raw == nil {
 			s.Raw = make(map[string]interface{})
 		}
 		s.Raw["default_opus_model"] = v
+		s.Model = v
 	}
 	if v := os.Getenv("ANTHROPIC_DEFAULT_SONNET_MODEL"); v != "" {
 		if s.Raw == nil {
 			s.Raw = make(map[string]interface{})
 		}
 		s.Raw["default_sonnet_model"] = v
+		s.Model = v
 	}
 	if v := os.Getenv("ANTHROPIC_DEFAULT_HAIKU_MODEL"); v != "" {
 		if s.Raw == nil {
 			s.Raw = make(map[string]interface{})
 		}
 		s.Raw["default_haiku_model"] = v
+		s.Model = v
 	}
 
 	// API base URL

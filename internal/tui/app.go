@@ -19,7 +19,7 @@ import (
 func Run(ctx context.Context, state *bootstrap.State, args []string) error {
 	theme := styles.DefaultTheme()
 	model := newAppModel(state, args, theme)
-	p := tea.NewProgram(model, tea.WithContext(ctx))
+	p := tea.NewProgram(&model, tea.WithContext(ctx))
 	_, err := p.Run()
 	return err
 }
@@ -90,7 +90,7 @@ func newAppModel(state *bootstrap.State, args []string, theme styles.Theme) appM
 	return m
 }
 
-func (m appModel) Init() tea.Cmd {
+func (m *appModel) Init() tea.Cmd {
 	return tea.Tick(time.Millisecond*120, func(time.Time) tea.Msg {
 		return spinnerTickMsg{}
 	})
@@ -98,7 +98,7 @@ func (m appModel) Init() tea.Cmd {
 
 type spinnerTickMsg struct{}
 
-func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (m *appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -230,7 +230,7 @@ func (m *appModel) refreshCompletions() {
 	m.prompt.GhostText = m.completionEngine.GetGhostText(m.prompt.Buffer, m.bootstrap.Cwd)
 }
 
-func (m appModel) processInput() (tea.Model, tea.Cmd) {
+func (m *appModel) processInput() (tea.Model, tea.Cmd) {
 	input := m.prompt.Submit()
 	if input == "" {
 		return m, nil
@@ -246,7 +246,7 @@ func (m appModel) processInput() (tea.Model, tea.Cmd) {
 	return m.handleUserInput(input)
 }
 
-func (m appModel) handleCommand(input string) (tea.Model, tea.Cmd) {
+func (m *appModel) handleCommand(input string) (tea.Model, tea.Cmd) {
 	parts := strings.Fields(input)
 	cmdName := strings.TrimPrefix(parts[0], "/")
 	args := parts[1:]
@@ -301,7 +301,7 @@ func (m appModel) handleCommand(input string) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m appModel) handleUserInput(input string) (tea.Model, tea.Cmd) {
+func (m *appModel) handleUserInput(input string) (tea.Model, tea.Cmd) {
 	m.messages = append(m.messages, types.Message{
 		Role: types.RoleUser,
 		Content: []types.ContentBlock{
@@ -342,7 +342,7 @@ type engineTokenMsg struct {
 	Token string
 }
 
-func (m appModel) submitQuery(input string) tea.Cmd {
+func (m *appModel) submitQuery(input string) tea.Cmd {
 	return func() tea.Msg {
 		ctx := context.Background()
 		var textBuffer strings.Builder
@@ -365,7 +365,7 @@ func (m appModel) submitQuery(input string) tea.Cmd {
 	}
 }
 
-func (m appModel) handleEngineResult(msg engineResultMsg) (tea.Model, tea.Cmd) {
+func (m *appModel) handleEngineResult(msg engineResultMsg) (tea.Model, tea.Cmd) {
 	m.streaming = false
 
 	if msg.err != nil {
@@ -403,7 +403,7 @@ func (m appModel) handleEngineResult(msg engineResultMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
-func (m appModel) View() tea.View {
+func (m *appModel) View() tea.View {
 	if m.height <= 0 {
 		return tea.NewView("")
 	}
