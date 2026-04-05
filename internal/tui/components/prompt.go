@@ -192,13 +192,25 @@ func (p *PromptInput) RenderSuggestions(width int) string {
 		return ""
 	}
 
-	var lines []string
 	maxLines := 6
 	if len(p.Suggestions) < maxLines {
 		maxLines = len(p.Suggestions)
 	}
 
-	for i := 0; i < maxLines; i++ {
+	// Calculate the visible window centered on the selected suggestion
+	startIdx := p.SelectedSuggestion - maxLines/2
+	if startIdx < 0 {
+		startIdx = 0
+	}
+	if startIdx+maxLines > len(p.Suggestions) {
+		startIdx = len(p.Suggestions) - maxLines
+	}
+	if startIdx < 0 {
+		startIdx = 0
+	}
+
+	var lines []string
+	for i := startIdx; i < startIdx+maxLines; i++ {
 		s := p.Suggestions[i]
 		var prefix string
 		if i == p.SelectedSuggestion {

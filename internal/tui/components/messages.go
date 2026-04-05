@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"charm.land/lipgloss/v2"
 	"github.com/Lachine1/claude-gode/internal/tui/styles"
 )
 
@@ -202,40 +203,70 @@ func renderMessage(msg DisplayMessage, width int) string {
 	}
 }
 
+func ensureTheme(t styles.Theme) styles.Theme {
+	if t.UserMessage.GetBackground() == nil {
+		t.UserMessage = t.UserMessage.
+			Background(lipgloss.Color(styles.ColorUserBg)).
+			Padding(0, 2).
+			MarginTop(1).
+			MarginBottom(1)
+	}
+	if t.AssistantMessage.GetForeground() == nil {
+		t.AssistantMessage = t.AssistantMessage.
+			Foreground(lipgloss.Color(styles.ColorText)).
+			MarginTop(1).
+			MarginBottom(1)
+	}
+	if !t.ToolCall.GetBorderLeft() {
+		t.ToolCall = t.ToolCall.
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderTop(false).
+			BorderLeft(true).
+			BorderRight(false).
+			BorderBottom(false).
+			BorderForeground(lipgloss.Color(styles.ColorPermission)).
+			PaddingLeft(1).
+			MarginTop(1).
+			MarginBottom(1)
+	}
+	return t
+}
+
 // renderUserMessage: gray background, NO prefix, just the content
-// Source: UserTextMessage.tsx - plain text in gray bg box
 func renderUserMessage(msg DisplayMessage, width int) string {
-	return msg.Theme.UserMessage.Width(width).Render(msg.Content)
+	t := ensureTheme(msg.Theme)
+	return t.UserMessage.Width(width).Render(msg.Content)
 }
 
 // renderAssistantMessage: plain white text, NO prefix
-// Source: AssistantTextMessage.tsx - plain text, no wrapper
 func renderAssistantMessage(msg DisplayMessage, width int) string {
+	t := ensureTheme(msg.Theme)
 	if msg.Content == "" {
-		return msg.Theme.AssistantMessage.Width(width).Render("●")
+		return t.AssistantMessage.Width(width).Render("●")
 	}
-	return msg.Theme.AssistantMessage.Width(width).Render(msg.Content)
+	return t.AssistantMessage.Width(width).Render(msg.Content)
 }
 
 // renderToolCall: left border (│), format: "⟳ tool_name — input_summary"
-// Source: AssistantToolUseMessage.tsx
 func renderToolCall(msg DisplayMessage, width int) string {
+	t := ensureTheme(msg.Theme)
+
 	var statusIcon string
 	var statusText string
 
 	switch msg.Status {
 	case "running":
 		statusIcon = msg.Spinner
-		statusText = msg.Theme.ToolCallRunning.Render(msg.ToolName)
+		statusText = t.ToolCallRunning.Render(msg.ToolName)
 	case "success":
 		statusIcon = "✓"
-		statusText = msg.Theme.ToolCallSuccess.Render(msg.ToolName)
+		statusText = t.ToolCallSuccess.Render(msg.ToolName)
 	case "error":
 		statusIcon = "✗"
-		statusText = msg.Theme.ToolCallError.Render(msg.ToolName)
+		statusText = t.ToolCallError.Render(msg.ToolName)
 	default:
 		statusIcon = "◌"
-		statusText = msg.Theme.ToolCallRunning.Render(msg.ToolName)
+		statusText = t.ToolCallRunning.Render(msg.ToolName)
 	}
 
 	inputSummary := msg.Content
@@ -250,7 +281,7 @@ func renderToolCall(msg DisplayMessage, width int) string {
 		content = statusIcon + " " + statusText
 	}
 
-	return msg.Theme.ToolCall.Width(width).Render(content)
+	return t.ToolCall.Width(width).Render(content)
 }
 
 // renderToolResult: dimmed, collapsed preview
@@ -266,7 +297,6 @@ func renderToolResult(msg DisplayMessage, width int) string {
 }
 
 // renderThinking: dimmed, italic, subtle
-// Static shimmer style (gradient-like appearance)
 func renderThinking(msg DisplayMessage, width int) string {
 	return msg.Theme.ThinkingBlock.Width(width).Render(msg.Content)
 }

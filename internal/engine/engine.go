@@ -59,6 +59,11 @@ func NewQueryEngine(config EngineConfig) *QueryEngine {
 	}
 }
 
+// SetModel updates the model used by the QueryEngine at runtime.
+func (e *QueryEngine) SetModel(model string) {
+	e.config.Model = model
+}
+
 // SubmitMessage is the main entry point. It adds a user message, calls the API,
 // executes any tool calls, and handles compaction.
 func (e *QueryEngine) SubmitMessage(ctx context.Context, userMessage string, onEvent func(Event)) error {

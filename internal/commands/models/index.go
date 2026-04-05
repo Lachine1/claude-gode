@@ -84,8 +84,13 @@ func switchModel(ctx *types.CommandContext, cfg *svcconfig.Config, modelName str
 		return fmt.Errorf("unknown model: %s\nAvailable models: %s", modelName, strings.Join(availableModels, ", "))
 	}
 
+	// Update runtime config
 	cfg.Set("model", modelName)
+	if cfg.Settings != nil {
+		cfg.Settings.Model = modelName
+	}
 
+	// Persist to settings.json
 	settingsPath := filepath.Join(homeDir(), ".claude", "settings.json")
 	settings := loadSettings(settingsPath)
 	settings["model"] = modelName
